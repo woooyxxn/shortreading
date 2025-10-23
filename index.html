@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<link href="https://db.onlinewebfonts.com/c/0b5d73e2efcdfdcf001e946ffaa2299b?family=KyivType+Serif" rel="stylesheet">
+<title>사이버 독서실</title>
+<style>
+	* {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+:root{ --book-w:220px; }
+*,*::before,*::after{ box-sizing:border-box; }
+body{ margin:0; padding-left:20px; height:100vh; background:url('background.jpg') center/cover no-repeat; font-family:"KyivType Serif", serif; overflow:hidden; }
+h1{ font-size:3.6em; color:#0055ff; margin:0; margin-left:10px; }
+.underline{ text-decoration:underline; }
+
+/* 아이콘 */
+.icons{ position:absolute; top:100px; left:20px; display:flex; flex-direction:column; gap:20px; }
+.icon{ position:relative; width:240px; }
+.icon img{ width:240px; height:auto; display:block; }
+/* 라벨 */
+.icon-label{ position:absolute; top:18px; right:-20px; background:#0000FF; color:#fff; font-size:14px; letter-spacing:.5px; padding:2px 4px; z-index:3; white-space:nowrap; }
+/* 기존 파랑 채움 마스크 */
+.blue-mask{ position:absolute; left:0; right:0; bottom:0; height:50%; background:#0000FF; mix-blend-mode:multiply; pointer-events:none; z-index:1; }
+/* ⬇️ (이전 버전에서 쓰던 틴트 오버레이 – 그대로 두되 나중에 비활성화 패치로 끔) */
+.icon.tint::after{
+  content:""; position:absolute; inset:0; background:var(--accent);
+  mix-blend-mode:multiply; opacity:1; z-index:2; pointer-events:none;
+}
+/* 시계 바늘 */
+.icon2 .clock{ position:absolute; inset:0; pointer-events:none; z-index:3; }
+.icon2 .hand{ position:absolute; left:58%; top:66%; transform:translate(-50%,-50%); }
+.icon2 .hand span{ position:absolute; left:-1px; bottom:0; width:2px; background:#0000FF; border-radius:1px; transform-origin:bottom center; }
+.icon2 .hand.minute span{ height:34px; }
+.icon2 .hand.hour   span{ height:20px; }
+
+/* 🔔 경고창 (eyesight 옆) */
+.rest-alert{
+  position:absolute; top:60px; right:-0px;
+  background:#0000FF; color:#fff;
+  font-size:12px; line-height:1.2; font-weight:800;
+  padding:6px 28px 6px 10px; border-radius:6px;
+  box-shadow:0 6px 14px rgba(0,0,0,.18);
+  display:none; z-index:4;
+}
+.rest-alert .alert-close{
+  position:absolute; top:-9px; right:-9px;
+  width:20px; height:20px; border-radius:50%;
+  background:#fff; border:2px solid #fff; color:#0000FF;
+  font-weight:900; line-height:16px; text-align:center; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.rest-alert .alert-close:focus{ outline:2px solid rgba(255,255,255,.7); }
+
+/* 우측 서가 */
+.right-box{ position:fixed; top:0; right:0; width:350px; height:100vh; background:#0000FF; z-index:1; color:#fff; }
+.right-inner{ position:absolute; inset:0; padding-left:16px; display:flex; flex-direction:column; gap:18px; }
+.right-title{ font-size:3.4rem; font-weight:600; color:#fff; text-decoration:underline; text-underline-offset:6px; }
+.right-list{ display:flex; flex-direction:column; gap:12px; }
+.right-btn{ margin-top:10px; width:280px; height:120px; background:rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.6); color:#fff; font-weight:700; letter-spacing:.3px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-align:center; transition:transform .15s, background .15s, border-color .15s, box-shadow .15s, color .15s; }
+.right-btn:hover{ transform:translateY(-2px); background:rgba(255,255,255,0.12); border-color:#fff; }
+.right-btn.active{ background:#fff; color:#0000FF; border-color:#fff; box-shadow:0 0 0 2px #fff inset, 0 0 18px rgba(255,255,255,.7); }
+
+/* 🎨 컬러 선택 패널 */
+.color-panel{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+.color-panel .label{font-size:3.4rem; font-weight:600; color:#fff; text-decoration:underline; text-underline-offset:6px; }
+.swatches{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.swatch{
+  width:35px; height:35px; border-radius:50%; border:2px solid rgba(255,255,255,.7);
+  cursor:pointer; outline:none;
+}
+#colorPicker{
+  appearance:none; width:60px; height:35px; border:2px solid rgba(255,255,255,.7); border-radius:6px; background:transparent; cursor:pointer;
+}
+
+/* 중앙 책/링 */
+.book-center{ position:fixed; top:54%; left:47%; transform:translate(-50%,-50%); z-index:5; font-family:'BookFont', serif; }
+.book-title{ margin:0 0 6px 0; text-align:center; color:#0000FF; font-weight:800; letter-spacing:.4px; font-size:1rem; }
+
+/* ✅ 책만 감싸는 프레임(펄스 대상) */
+.book-frame{ display:inline-block; transform-origin:center; }
+
+/* All Clear 화면 */
+.book-center.allcleared .intro,
+.book-center.allcleared .spread,
+.book-center.allcleared .controls,
+.book-center.allcleared .book-title{ display:none!important; }
+#allClearMsg{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:2.4rem; font-weight:800; color:#0000FF; text-shadow:0 0 10px rgba(0,0,255,0.3); z-index:10; pointer-events:none; opacity:0; transition:.8s; text-align:center;
+  text-decoration:underline; text-underline-offset:6px;
+}
+.book-center.allcleared #allClearMsg{ opacity:1; }
+
+/* 펼친 책 */
+.spread{ position:relative; background:#d9d9d9; border:2px solid #0000FF; width:var(--book-w); height:180px; overflow:hidden; display:none; z-index:7; }
+.spread::after{ content:""; position:absolute; top:0; bottom:0; left:50%; transform:translateX(-1px); border-left:2px solid #0000FF; }
+.page{ flex:1; min-width:0; color:#0000FF; font-size:14px; padding-top:8px; padding-bottom:48px; cursor:pointer; position:relative; z-index:8; }
+.page.left{ padding-left:12px; padding-right:24px; }
+.page.right{ padding-left:8px; padding-right:12px; }
+.page .inner{ display:block; width:100%; white-space:pre-line; line-height:23px; height:calc(23px*6); overflow:hidden; word-break:keep-all; overflow-wrap:normal; hyphens:none; }
+/* 페이지 번호 + 테마 글로우 */
+.page-no{ position:absolute; bottom:8px; color:#0000FF; font-size:14px; transform:translateX(-50%); z-index:8;
+}
+.page-no.left{ left:25%; } .page-no.right{ left:75%; }
+
+/* 컨트롤 */
+.controls{ position:relative; width:var(--book-w); height:22px; margin:8px auto 0; z-index:8; }
+.page-status{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:#0000FF; font-size:14px; font-weight:bold; text-align:center; }
+.btn{ position:absolute; top:1px; width:20px; height:20px; border-radius:50%; background:#0000FF; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.prev-btn{ left:0; } .next-btn{ right:0; }
+.btn span{ width:0; height:0; border-top:4px solid transparent; border-bottom:4px solid transparent; }
+.prev-btn span{ border-right:6px solid #fff; margin-right:1px; }
+.next-btn span{ border-left:6px solid #fff;  margin-left:1px; }
+
+/* start 버튼 */
+.start-btn{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  background:#0000FF; color:#fff; border:none; padding:6px 12px; border-radius:12px; font-size:12px; cursor:pointer;
+  z-index:9; pointer-events:auto;
+}
+.controls .btn,.controls .page-status{ visibility:hidden; }
+.book-center.started .spread{ display:flex; }
+.book-center.started .ring-boxes{ display:block; }
+.controls.started .btn,.controls.started .page-status{ visibility:visible; }
+.controls.started .start-btn{ display:none; }
+
+/* 텍스트 측정 박스 */
+#measureBox{ position:absolute; left:-99999px; top:-99999px; visibility:hidden; white-space:pre-line; line-height:23px; word-break:keep-all; overflow-wrap:normal; hyphens:none; font-family:'BookFont', serif; font-size:14px; width:100px; }
+
+/* 링 (테마 글로우 추가) */
+.ring-boxes{ position:fixed; top:50%; left:50%; width:600px; height:600px; transform:translate(-50%,-50%); pointer-events:auto; display:none; z-index:3; }
+.ring-box{ position:absolute; width:120px; height:120px; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#000; font-size:14px; font-weight:700; text-align:center; transition:.15s; overflow:hidden;
+  /* (기존 기본 글로우 – 이후 패치에서 끔) */
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.ring-img{ position:absolute; top:6px; left:6px; right:6px; bottom:6px; max-width:calc(100% - 8px); max-height:calc(100% - 8px); object-fit:cover; z-index:0; pointer-events:none; transition:opacity .15s ease, transform .15s ease; }
+/* 호버/액티브 시 더 강한 글로우 (테마 컬러) */
+.ring-box:hover,
+.ring-box.active{
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 22px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 36px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.ring-box .title,.ring-box .prog{ position:relative; z-index:1; opacity:0; transition:opacity .15s ease; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35); }
+.ring-box:hover{ transform:translate(-50%,-50%) scale(1.06); background:#0000FF!important; color:#fff; }
+.ring-box:hover .title,.ring-box:hover .prog{ opacity:1; }
+.ring-box:hover .ring-img{ opacity:.20; }
+.ring-box.active{ transform:translate(-50%,-50%) scale(1.06); background:#0000FF!important; color:#fff; box-shadow:
+  0 0 12px color-mix(in srgb, var(--accent) 45%, transparent),
+  0 0 28px color-mix(in srgb, var(--accent) 80%, transparent); }
+.ring-box.active .title,.ring-box.active .prog{ opacity:0; }
+.ring-box.active .ring-img{ opacity:.35; }
+.ring-box.cleared{ background:#0000FF!important; color:#fff; pointer-events:none; }
+.ring-box.cleared .title,.ring-box.cleared .prog{ opacity:0; }
+.ring-box.cleared::before{ content:"clear!"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:900; font-size:20px; letter-spacing:1px; transform:rotate(-24deg); z-index:2; }
+.ring-box.cleared .ring-img{ opacity:.2; }
+
+/* 인트로 카드 */
+.intro{ display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+.intro-card{
+  width:120px; height:180px;
+  background:var(--accent);
+  color:#fff;
+  display:flex; align-items:center; justify-content:center; text-align:center; padding:8px;
+  transition: background-color .3s ease;
+}
+.intro-text{ font-size:14px; line-height:1.4; }
+
+/* 폰트 fallback */
+@font-face{ font-family:'BookFont'; src:local('KyivType Serif'); unicode-range:U+0020-007E, U+0030-0039; }
+@font-face{ font-family:'BookFont'; src:local('Noto Sans KR'), local('Apple SD Gothic Neo'), local('Malgun Gothic'); unicode-range:U+AC00-D7A3; }
+
+/* 지능 글로우 */
+@keyframes outer-glow{ 0%{filter:drop-shadow(0 0 0 rgba(255,255,255,0));} 50%{filter:drop-shadow(0 0 25px rgba(255,255,255,1));} 100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0));} }
+.icon1{ isolation:isolate; }
+.icon1.glow{ animation:outer-glow .7s ease; will-change:filter; }
+
+/* ✅ 책만 펄스 */
+@keyframes bookPulse {
+  0%{ transform:scale(1); }
+  50%{ transform:scale(0.99); }
+  100%{ transform:scale(1); }
+}
+.book-frame.pulsing{ animation:bookPulse .22s ease; }
+
+/* 폭죽 */
+#fxLayer{ position:fixed; inset:0; pointer-events:none; z-index:9; }
+.fx-p{ position:fixed; width:4px; height:4px; border-radius:50%; will-change: transform, opacity, filter;
+  animation: fx-move .6s ease-out forwards, fx-fade .6s linear forwards; filter: drop-shadow(0 0 2px rgba(0,0,0,.15));
+}
+@keyframes fx-move{
+  0%{ transform: translate(0,0) scale(1.0); }
+  15%{ transform: translate(calc(var(--dx)*0.15), calc(var(--dy)*0.15)) scale(1.3); }
+  100%{ transform: translate(var(--dx), var(--dy)) scale(0.9); }
+}
+@keyframes fx-fade{ from{opacity:1;} to{opacity:0;} }
+
+/* 포인터 */
+.spread .page{ cursor:pointer; }
+</style>
+
+<!-- ✅ 테마 오버라이드: var(--accent)로 전체 테마/이펙트 일괄 변경 -->
+<style id="themeOverrides">
+:root{
+  --accent:#0000FF;         /* 기본 포인트 컬러 */
+  --accent-contrast:#FFFFFF;/* 대비색(텍스트/아이콘) */
+}
+/* 기본 파랑 계열을 전부 덮어씀 */
+h1{ color:var(--accent); }
+.icon-label{ background:var(--accent); }
+.blue-mask{ background:var(--accent); }
+.icon2 .hand span{ background:var(--accent); }
+.book-title{ color:var(--accent); }
+#allClearMsg{ color:var(--accent); }
+
+/* 책 */
+.spread{ border-color:var(--accent); }
+.spread::after{ border-left:2px solid var(--accent); }
+.page, .page-no{ color:var(--accent); }
+
+/* 컨트롤/버튼/서가 */
+.btn, .start-btn{ background:var(--accent); }
+.right-box{ background:var(--accent); }
+.right-btn.active{ color:var(--accent); }
+
+/* 링 배경상태 */
+.ring-box:hover,
+.ring-box.active,
+.ring-box.cleared{ background:var(--accent)!important; }
+
+/* 경고창 */
+.rest-alert{ background:var(--accent); }
+.rest-alert .alert-close{ color:var(--accent); }
+</style>
+
+<!-- 🔧 PATCHES: 요청사항 덮어쓰기 (기존 코드 보존) -->
+<style id="patches">
+/* 1) 선택되지 않은 ringbox 기본 글로우 제거 */
+.ring-box{ box-shadow:none !important; }
+
+/* 2) 아이콘 hue-rotate로 파란색만 메인컬러로 회전 (링/책 표지에는 영향 X) */
+.icons .icon > img{
+  filter: hue-rotate(var(--icon-hue,0deg))
+          saturate(var(--icon-sat,1))
+          brightness(var(--icon-bright,1));
+  transition: filter .2s ease;
+}
+/* 오버레이 틴트는 끔(요청사항) */
+.icon.tint::after{ display:none !important; }
+</style>
+<style id="progressFix">
+  /* 책 아래 중앙 진행도 숫자(1/1 등)를 메인컬러로, 위계 제일 위로 */
+  .controls .page-status{
+    color: var(--accent) !important;
+    z-index: 12 !important;
+  }
+</style>
+
+</head>
+
+<body>
+<h1>
+  <span class="underline">Date/Time :</span>&nbsp;&nbsp;&nbsp;
+  <span id="dt" class="underline">2025/1/1(wed)/12:00AM</span>
+</h1>
+
+<!-- 아이콘(클래스/구조 유지) -->
+<div class="icons">
+  <div class="icon icon1 tint">
+    <img src="rate_intelligence.jpg" alt="">
+    <div id="icon1Mask" class="blue-mask"></div>
+    <span class="icon-label">intelligence</span>
+  </div>
+  <div class="icon icon2 tint">
+    <img src="rate_time.png" alt="">
+    <div class="clock">
+      <div class="hand minute"><span></span></div>
+      <div class="hand hour"><span></span></div>
+    </div>
+    <span class="icon-label">time speed</span>
+  </div>
+  <div class="icon icon3 tint">
+    <img id="eyesightImg" src="rate_eyesight.png" alt="">
+    <span class="icon-label">eyesight</span>
+
+    <!-- 🔔 경고창 -->
+    <div id="restAlert" class="rest-alert" role="alert" aria-live="polite">
+      휴식이 필요합니다!
+      <button class="alert-close" id="restAlertClose" aria-label="닫기">×</button>
+    </div>
+  </div>
+</div>
+
+<!-- 책/링 UI -->
+<div class="book-center" id="bookCenter">
+  <div id="allClearMsg">All Clear!</div>
+  <div id="bookTitle" class="book-title">≪사이버 독서실≫</div>
+
+  <!-- ✅ 책만 감싸는 프레임 -->
+  <div class="book-frame" id="bookFrame">
+    <div class="intro" id="intro">
+      <div class="intro-card"><div class="intro-text">올해가 가기 전에 완독해 보아요!</div></div>
+    </div>
+
+    <div class="spread">
+      <div class="page left"><div class="inner" id="pageL"></div></div>
+      <div class="page right"><div class="inner" id="pageR"></div></div>
+      <div class="page-no left" id="numL"></div>
+      <div class="page-no right" id="numR"></div>
+    </div>
+
+    <div class="controls" id="controls">
+      <button class="btn prev-btn" id="prevBtn" aria-label="이전"><span></span></button>
+      <div class="page-status" id="pageStatus">1/1</div>
+      <button class="btn next-btn" id="nextBtn" aria-label="다음"><span></span></button>
+      <button class="start-btn" id="startBtn">start!</button>
+    </div>
+  </div>
+
+  <!-- 링은 프레임 밖(책 아래 레이어) -->
+  <div class="ring-boxes" id="ring"></div>
+</div>
+
+<!-- 우측 서가 -->
+<aside class="right-box" aria-hidden="false">
+  <div class="right-inner">
+    <div class="right-title">Bookshelf</div>
+    <div class="right-list" id="shelf">
+       <button class="right-btn active" data-cat="kr_poetry">LEVEL 1 현대시</button>
+       <button class="right-btn" data-cat="kr_modern">LEVEL 2 현대한국문학</button>
+       <button class="right-btn" data-cat="classics">LEVEL 3 세계고전문학</button>
+    </div>
+
+    <!-- 🎨 컬러 선택 패널 -->
+    <div class="color-panel" id="colorPanel">
+      <div class="label">Theme</div>
+      <div class="swatches">
+  <button class="swatch" data-color="#0000FF" style="background:#0000FF" aria-label="Blue"></button>
+  <button class="swatch" data-color="#FF006E" style="background:#FF006E" aria-label="Pink"></button>
+  <button class="swatch" data-color="rgb(0,153,133)" style="background:rgb(0,153,133)" aria-label="Teal"></button>
+  <button class="swatch" data-color="#8B5CF6" style="background:#8B5CF6" aria-label="Violet"></button>
+  <button class="swatch" data-color="rgb(0,0,0)" style="background:rgb(0,0,0)" aria-label="Black"></button>
+  <input type="color" id="colorPicker" value="#0000FF" aria-label="Custom color">
+</div>
+    </div>
+  </div>
+</aside>
+
+<div id="measureBox"></div>
+<div id="fxLayer"></div>
+
+<!-- 📢 페이지 넘김 효과음 -->
+<audio id="pageSound" src="pagesound.wav" preload="auto"></audio>
+<script>
+/* ===== 시계/지표 ===== */
+let started=false;
+let cur=new Date('2025-01-01T00:00:00');
+const el=document.getElementById('dt');
+const wday=['sun','mon','tue','wed','thu','fri','sat'];
+const pad2=n=>String(n).padStart(2,'0');
+const fmt=d=>{const y=d.getFullYear(),m=d.getMonth()+1,day=d.getDate(),wd=wday[d.getDay()];let h=d.getHours(),mm=pad2(d.getMinutes()),ampm=h>=12?'PM':'AM';h=h%12;if(h===0)h=12;return `${y}/${m}/${day}(${wd})/${pad2(h)}:${mm}${ampm}`;};
+const updateClock=()=>el.textContent=fmt(cur);
+
+/* intelligence */
+let intelligence=20;
+const iconMask=document.getElementById('icon1Mask');
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+function updateMask(){ if(iconMask) iconMask.style.height=clamp(intelligence,0,100)+'%'; }
+updateMask();
+
+/* 아이콘2 시계 바늘 */
+const minHand=document.querySelector('.icon2 .hand.minute span');
+const hourHand=document.querySelector('.icon2 .hand.hour span');
+let prevTs=null; let minAngle=0, hourAngle=0;
+function omegaFactor(){ return 1+(100-clamp(intelligence,0,100))*(19/80); }
+const OMEGA_MIN_BASE=(Math.PI*2)/30;
+const OMEGA_HOUR_BASE=(Math.PI*2)/360;
+function tick(ts){
+  if(!started){ requestAnimationFrame(tick); return; }
+  if(!prevTs){ prevTs=ts; }
+  const dt=(ts-prevTs)/1000; prevTs=ts;
+  const f=omegaFactor();
+  minAngle += OMEGA_MIN_BASE*f*dt;
+  hourAngle+= OMEGA_HOUR_BASE*f*dt;
+  if(minHand)  minHand.style.transform = `rotate(${minAngle}rad)`;
+  if(hourHand) hourHand.style.transform = `rotate(${hourAngle}rad)`;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+/* 헤더 타이머 */
+updateClock();
+let hourAccum=0, headerTimer=null;
+function startHeaderTimer(){
+  if(headerTimer) return;
+  headerTimer=setInterval(()=>{
+    if(!started) return;
+    cur.setHours(cur.getHours()+1); updateClock();
+    hourAccum+=1;
+    if(hourAccum>=2){ hourAccum-=2; intelligence=clamp(intelligence-1,0,100); updateMask(); }
+  },1000);
+}
+
+/* ===== 책/페이지 ===== */
+const lineHeight=23, maxLines=6, allowH=lineHeight*maxLines;
+const leftInner=document.getElementById('pageL');
+const rightInner=document.getElementById('pageR');
+const numL=document.getElementById('numL');
+const numR=document.getElementById('numR');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
+const pageStatus=document.getElementById('pageStatus');
+const measureBox=document.getElementById('measureBox');
+const bookTitleEl=document.getElementById('bookTitle');
+const fxLayer=document.getElementById('fxLayer');
+
+/* ✅ 펄스 대상: 책 프레임 */
+const bookFrame=document.getElementById('bookFrame');
+
+/* 🔊 페이지 넘김 소리 */
+const pageSound = document.getElementById('pageSound');
+function playPageSound(){
+  if(!pageSound) return;
+  try{
+    pageSound.currentTime = 0;
+    pageSound.play();
+  }catch(e){ /* 사용자 상호작용 전 자동재생 제한 시 무시 */ }
+}
+
+/* 🔢 읽은 총 페이지 수 & 반복 경고(200장마다) */
+let totalPagesRead = 0;
+const REST_PAGES_THRESHOLD = 200;
+let nextRestMilestone = REST_PAGES_THRESHOLD;
+let restAlertOpen = false;
+
+const restAlertEl = document.getElementById('restAlert');
+const restAlertCloseBtn = document.getElementById('restAlertClose');
+
+function showRestAlert(){ if(restAlertEl){ restAlertEl.style.display='block'; restAlertOpen=true; } }
+function hideRestAlert(){ if(restAlertEl){ restAlertEl.style.display='none'; restAlertOpen=false; } }
+function maybeShowRestAlert(){
+  if (!restAlertOpen && totalPagesRead >= nextRestMilestone){
+    showRestAlert();
+    nextRestMilestone += REST_PAGES_THRESHOLD;
+  }
+}
+function incrementPagesRead(n=1){ totalPagesRead += n; maybeShowRestAlert(); }
+if (restAlertCloseBtn){ restAlertCloseBtn.addEventListener('click', hideRestAlert); }
+
+let spreads=[], spreadIndex=0;
+const BOOK_STATE={};
+const CATEGORY_STATE={ kr_poetry:{allCleared:false}, kr_modern:{allCleared:false}, classics:{allCleared:false} };
+let currentBook='기본';
+let currentCategory='kr_poetry';
+
+const FULL_TEXT = `
+저희의 숏폼-독서 서비스는 보상체계의 증폭을 통해 집중에 어려움을 겪는 독자들도 만족할 수 있는 즐거운 독서 경험을 제공하고자 합니다. 이제 주위에 떠다니는 책들 중 읽고 싶은 것 클릭 읽어보세요. 우측의 서재에서는 종류를 고를 수 있습니다!
+`;
+
+function getWidths(){ return { left:leftInner.clientWidth, right:rightInner.clientWidth }; }
+function fillByWords(width, words, startIndex){
+  measureBox.style.width=width+'px';
+  let text='', used=0;
+  for(let i=startIndex;i<words.length;i++){
+    const next=(text?text+' ':'')+words[i];
+    measureBox.textContent=next;
+    if(measureBox.scrollHeight>allowH) break;
+    text=next; used++;
+  }
+  return {text, used};
+}
+function paginateByMeasure(fullText){
+  const tokens=fullText.trim().split(/\s+/).filter(Boolean);
+  const res=[]; let i=0;
+  while(i<tokens.length){
+    const {left,right}=getWidths();
+    const leftFill = fillByWords(left, tokens, i); i+=Math.max(0,leftFill.used);
+    const rightFill= fillByWords(right,tokens,i); i+=Math.max(0,rightFill.used);
+    if(leftFill.used===0 && rightFill.used===0){ i++; }
+    res.push({left:leftFill.text, right:rightFill.text});
+  }
+  return res;
+}
+
+/* All Clear 화면 토글 */
+function showAllClear(){ document.getElementById('bookCenter').classList.add('allcleared'); }
+function hideAllClear(){ document.getElementById('bookCenter').classList.remove('allcleared'); }
+
+function ensureBook(title, rawText){
+  if(!BOOK_STATE[title]){
+    const sanitized=(rawText||'').replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n');
+    BOOK_STATE[title]={ text:sanitized, spreads:paginateByMeasure(sanitized), index:0, cleared:false };
+  }
+}
+function loadBook(title){
+  if(CATEGORY_STATE[currentCategory]?.allCleared){ showAllClear(); return; }
+  hideAllClear();
+  currentBook=title;
+  const st=BOOK_STATE[title];
+  spreads=st.spreads; spreadIndex=st.index;
+  render(); setActiveRing(title);
+  if(bookTitleEl) bookTitleEl.textContent=`≪${title}≫`;
+}
+function saveIndex(){ if(BOOK_STATE[currentBook]) BOOK_STATE[currentBook].index=spreadIndex; }
+function render(){
+  const s=spreads[spreadIndex]||{left:'', right:''};
+  leftInner.textContent=s.left||'';
+  rightInner.textContent=s.right||'';
+  const leftIdx=spreadIndex*2, rightIdx=leftIdx+1;
+  numL.textContent=leftIdx+1; numR.textContent=rightIdx+1;
+
+  const isLastSpread = (spreadIndex === spreads.length - 1);
+  const rightEmpty = !(s.right && s.right.trim());
+  if(isLastSpread && rightEmpty){
+    nextBtn.style.visibility='hidden';
+    const st=BOOK_STATE[currentBook];
+    if(st && !st.cleared){ clearCurrentBook(); }
+  }else{
+    nextBtn.style.visibility='visible';
+  }
+
+  prevBtn.style.visibility=spreadIndex>0?'visible':'hidden';
+  pageStatus.textContent=`${rightIdx+1}/${spreads.length*2}`;
+  updateRingProgress();
+}
+
+/* ✅ 책만 펄스 */
+function pulseBook() {
+  bookFrame.classList.remove('pulsing');
+  void bookFrame.offsetWidth;
+  bookFrame.classList.add('pulsing');
+}
+
+/* 좌우 페이지 클릭 */
+const pageLeft  = document.querySelector('.page.left');
+const pageRight = document.querySelector('.page.right');
+
+pageLeft.addEventListener('click', () => {
+  if (!started) return;
+  if (spreadIndex > 0) {
+    spreadIndex--;
+    saveIndex();
+    render();
+    pulseBook();
+    playPageSound();
+  }
+});
+pageRight.addEventListener('click', () => {
+  if (!started) return;
+  const st = BOOK_STATE[currentBook];
+  if (!st) return;
+
+  if (spreadIndex < spreads.length - 1) {
+    spreadIndex++;
+    saveIndex();
+    render();
+    pulseBook();
+    playPageSound();
+    incrementPagesRead(1);
+  } else {
+    const last = spreads[spreadIndex];
+    const rightEmpty = !(last.right && last.right.trim());
+    if (!rightEmpty) {
+      clearCurrentBook();
+      pulseBook();
+      playPageSound();
+      incrementPagesRead(1);
+    }
+  }
+});
+
+/* ===== 링 회전 ===== */
+const ringWrap=document.getElementById('ring');
+let orbitRAF=null, basePhases=[];
+let orbitRadiusFactor = 1;
+const ORBIT={ A:300, B:200, COS:Math.SQRT1_2, SIN:Math.SQRT1_2, OMEGA:0.03, BOB_A:2, BOB_F:0.15 };
+
+function startOrbit(){
+  cancelOrbit();
+  const boxes=[...document.querySelectorAll('.ring-box')];
+  const N=boxes.length;
+  basePhases=[...Array(N)].map((_,i)=>(i/N)*Math.PI*2);
+  let t0=null;
+  function frame(ts){
+    if(!t0) t0=ts;
+    const t=(ts-t0)/1000;
+    for(let i=0;i<N;i++){
+      const box=boxes[i]; if(!box) continue;
+      const ang=basePhases[i]+ORBIT.OMEGA*t;
+      const A=ORBIT.A*orbitRadiusFactor, B=ORBIT.B*orbitRadiusFactor;
+      const x=A*Math.cos(ang), y=B*Math.sin(ang);
+      const xr=x*ORBIT.COS - y*ORBIT.SIN;
+      const yr=x*ORBIT.SIN + y*ORBIT.COS;
+      const bob=ORBIT.BOB_A*Math.sin((t*ORBIT.BOB_F*2*Math.PI)+i);
+      box.style.left=`calc(50% + ${xr}px)`;
+      box.style.top =`calc(50% + ${yr + bob}px)`;
+      box.style.transform='translate(-50%,-50%)';
+    }
+    orbitRAF=requestAnimationFrame(frame);
+  }
+  orbitRAF=requestAnimationFrame(frame);
+}
+function cancelOrbit(){ if(orbitRAF){ cancelAnimationFrame(orbitRAF); orbitRAF=null; } }
+function pulseRings(duration=520){
+  orbitRadiusFactor = 0;
+  const start = performance.now();
+  function step(now){
+    const p = Math.min(1, (now - start)/duration);
+    const eased = 1 - Math.pow(1 - p, 3);
+    orbitRadiusFactor = eased;
+    if(p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ===== 데이터 ===== */
+const PD_POEM = `
+윤동주 「서시」
+죽는 날까지 하늘을 우러러
+한 점 부끄럼이 없기를
+… (퍼블릭 도메인 원문을 이 영역에 붙여넣으세요)
+
+김소월 「진달래꽃」
+나 보기가 역겨워 가실 때에는
+말없이 고이 보내 드리우리다
+… (원문)
+
+한용운 「님의 침묵」
+님은 갔습니다.
+아아, 사랑하는 나의 님은 갔습니다.
+… (원문)
+
+이상 「오감도(제1호)」
+제1의 아해가 무섭다고 그리하였다.
+제2의 아해도 무섭다고 그리하였다.
+… (원문)
+`;
+
+const SET_KR_POETRY=[
+  {title:'진달래꽃 — 김소월', img:'book3_1.png', text:`나 보기가 역겨워 가실 때에는 말없이 고이 보내 드리오리다. 
+ 
+영변(寧邊)에 약산(藥山) 진달래꽃 아름 따다 가실 길에 뿌리오리다.
+ 
+가시는 걸음 걸음 놓인 그 꽃을 사뿐히 즈려 밟고 가시옵소서.   나 보기가 역겨워 가실 때에는 죽어도 아니 눈물 흘리오리다.    `},
+  {title:'님의 침묵 — 한용운', img:'book3_2.png', text:`님은 갔습니다.
+아아, 사랑하는 나의 님은 갔습니다. 푸른 산빛을 깨치고 단풍나무 숲을 향하야 난 적은 길을 걸어서 참어 떨치고 갔습니다. 황금(黃金)의 꽃같이 굳고 빛나든 옛 맹서(盟誓)는 차디찬 티끌이 되야서 한숨의 미풍(微風)에 날어갔습니다. 날카로운 첫 키스의 추억(追憶)은 나의 운명(運命)의 지침(指針)을 돌려 놓고 뒷걸음쳐서 사러졌습니다. 나는 향기로운 님의 말소리에 귀먹고, 꽃다운 님의 얼굴에 눈멀었습니다. 사랑도 사람의 일이라, 만날 때에 미리 떠날 것을 염려하고 경계하지 아니한 것은 아니지만,
+이별은 뜻밖의 일이 되고, 놀란 가슴은 새로운 슬픔에 터집니다. 그러나, 이별을 쓸데없는 눈물의 원천(源泉)을 만들고 마는 것은 스스로 사랑을 깨치는 것인 줄 아는 까닭에, 걷잡을 수 없는 슬픔의 힘을 옮겨서 새 희망의 정수박이에 들어부었습니다. 우리는 만날 때에 떠날 것을 염려하는 것과 같이, 떠날 때에 다시 만날 것을 믿습니다. 아아, 님은 갔지마는 나는 님을 보내지 아니하였습니다. 제 곡조를 못이기는 사랑의 노래는 님의 침묵(沈默)을 휩싸고 돕니다.`},
+  {title:'동천 — 서정주', img:'book3_3.png', text:` 내 마음 속 우리 님의 고운 눈썹을 즈믄 밤의 꿈으로 맑게 씻어서 하늘에다 옮기어 심어 놨더니 동지 섣달 날으는 매서운 새가 그걸 알고 시늉하며 비끼어 가네.`},
+  {title:'유리창 — 정지용', img:'book3_4.png', text:`유리(琉璃)에 차고 슬픈 것이 어른거린다. 열없이 붙어 서서 입김을 흐리우니 길들은 양 언 날개를 파닥거린다. 지우고 보고 지우고 보아도 새까만 밤이 밀려나가고 밀려와 부딪히고, 물 먹은 별이, 반짝, 보석처럼 박힌다. 밤에 홀로 유리를 닦는 것은 외로운 황홀한 심사이어니, 고운 폐혈관(肺血管)이 찢어진 채로 아아, 늬는 산(山)ㅅ새처럼 날아갔구나!`},
+  {title:'남신의주유동박시봉방 - 백석',   img:'book3_5.png', text:`어느 사이에 나는 아내도 없고, 또, 아내와 같이 살던 집도 없어지고, 그리고 살뜰한 부모며 동생들과도 멀리 떨어져서, 그 어느 바람 세인 쓸쓸한 거리 끝에 헤매이었다. 바로 날도 저물어서, 바람은 더욱 세게 불고, 추위는 점점 더해오는데, 나는 어느 목수네 집 헌 삿을 깐, 한 방에 들어서 쥔을 붙이었다. 이리하여 나는 이 습내나는 춥고, 누긋한 방에서, 낮이나 밤이나 나는 나 혼자도 너무 많은 것같이 생각하며, 딜옹배기에 북덕불이라도 담겨 오면, 이것을 안고 손을 쬐며 재 우에 뜻없이 글자를 쓰기도 하며, 또 문 밖에 나가지두 않구 자리에 누워서, 머리에 손깍지베개를 하고 굴기도 하면서, 나는 내 슬픔이며 어리석음이며를 소처럼 연하여 쌔김질하는 것이었다. 내 가슴이 꽉 메어올 적이며, 내 눈에 뜨거운 것이 핑 괴일 적이며, 또 내 스스로 화끈 낯이 붉도록 부끄러울 적이며, 나는 내 슬픔과 어리석음에 눌리어 죽을 수밖에 없는 것을 느끼는 것이었다. 그러나 잠시 뒤에 나는 고개를 들어, 허연 문창을 바라보든가 또 눈을 떠서 높은 천장을 쳐다보는 것인데, 이 때 나는 내 뜻이며 힘으로, 나를 이끌어가는 것이 힘든 일인 것을 생각하고, 이것들보다 더 크고, 높은 것이 있어서, 나른 마음대로 굴려 가는 것을 생각하는 것인데, 이렇게 하여 여러 날이 지나는 동안에, 내 어지러운 마음에는 슬픔이며, 한탄이며, 가라앉을 것은 차츰 앙금이 되어 가라앉고, 외로운 생각만이 드는 때쯤 해서는, 더러 나줏손에 쌀랑쌀랑 싸락눈이 와서 문창을 치기도 하는 때도 있는데, 나는 이런 저녁에는 화로를 더욱 다가 끼며, 무릎을 꿇어 보며, 어느 먼 산 뒷옆에 바우섶에 따로 외로이 서서, 어두워 오는데 하이야니 눈을 맞을, 그 마른 잎새에는, 쌀랑쌀랑 소리도 나며 눈을 맞을, 그 드물다는 굳고 정한 갈매나무라는 나무를 생각하는 것이었다.`},
+  {title:'풀 — 김수영', img:'book3_6.png', text:`풀이 눕는다.
+비를 몰아오는 동풍에 나부껴
+풀은 눕고
+드디어 울었다.
+날이 흐려서 더 울다가
+다시 누웠다.
+풀이 눕는다.
+바람보다도 더 빨리 눕는다.
+바람보다도 더 빨리 울고
+바람보다 먼저 일어난다.
+날이 흐리고 풀이 눕는다.
+발목까지
+발밑까지 눕는다.
+바람보다 늦게 누워도
+바람보다 먼저 일어나고
+바람보다 늦게 울어도
+바람보다 먼저 웃는다.
+날이 흐리고 풀뿌리가 눕는다.  `},
+  {title:'꽃을 위한 서시 — 김춘수', img:'book3_7.png', text:`나는 시방 위험(危險)한 짐승이다.
+나의 손이 닿으면 너는
+미지(未知)의 까마득한 어둠이 된다.
+존재(存在)의 흔들리는 가지 끝에서
+너는 이름도 없이 피었다 진다.
+눈시울에 젖어 드는 이 무명(無名)의 어둠에
+추억(追憶)의 한 접시 불을 밝히고
+나는 한밤내 운다.
+나의 울음은 차츰 아닌밤 돌개바람이 되어
+탑(塔)을 흔들다가
+돌에까지 스미면 금(金)이 될 것이다.
+……얼굴을 가리운 나의 신부(新婦)여.  `},
+  {title:'오감도 (제1호) — 이상', img:'book3_8.png', text:`13인의 아해가 도로로 질주하오.  
+(길은 막다른 골목이 적당하오.)
+제1의 아해도 무섭다고 그리오.  
+제2의 아해도 무섭다고 그리오.  
+제3의 아해도 무섭다고 그리오.  
+제4의 아해도 무섭다고 그리오.  
+제5의 아해도 무섭다고 그리오.  
+제6의 아해도 무섭다고 그리오.  
+제7의 아해도 무섭다고 그리오.  
+제8의 아해도 무섭다고 그리오.  
+제9의 아해도 무섭다고 그리오.  
+제10의 아해도 무섭다고 그리오.  
+제11의 아해도 무섭다고 그리오.  
+제12의 아해도 무섭다고 그리오.  
+제13의 아해도 무섭다고 그리오.  
+13인의 아해는 무서운 아해와  
+무서워하는 아해와  
+그렇게뿐이 모였소.  
+(다른 사정은 없는 것이 차라리 나았소.)
+그중에 1인의 아해가  
+무서운 아해라도 좋소.  
+그중에 2인의 아해가  
+무서운 아해라도 좋소.  
+그중에 2인의 아해가  
+무서워하는 아해라도 좋소.  
+그중에 1인의 아해가  
+무서워하는 아해라도 좋소.  
+(길은 뚫린 골목이라도 적당하오.)  
+13인의 아해가  
+도로로 질주하지 아니하여도 좋소. 
+`},
+  {title:'또 다른 고향 — 윤동주', img:'book3_9.png', text:`고향에 돌아온 날 밤에 내 백골(白骨)이 따라와 한 방에 누웠다.
+ 
+어둔 방은 우주로 통하고, 하늘에선가 소리처럼 바람이 불어온다.
+ 
+어둠 속에 곱게 풍화 작용하는 백골을 들여다보며 눈물 짓는 것이 내가 우는 것이냐? 백골이 우는 것이냐? 아름다운 혼이 우는 것이냐?
+ 
+지조 높은 개는 밤을 새워 어둠을 짖는다.
+ 
+어둠을 짓는 개는 나를 쫓는 것일 게다.
+ 
+가자 가자 쫓기우는 사람처럼 가자. 백골 몰래 아름다운 또 다른 고향으로 가자. 
+`},
+  {title:'나그네 — 박목월', img:'book3_10.png', text:`강나루 건너서 밀밭 길을
+ 
+구름에 달 가듯이 가는 나그네.
+ 
+길은 외줄기 남도 삼백 리.
+ 
+술 익은 마을마다 타는 저녁놀.
+ 
+구름에 달 가듯이 가는 나그네.
+`},
+];
+
+const SET_CLASSICS=[
+  {title:'오만과 편견', img:'book1_1.png', text:'It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters. “My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?” Mr. Bennet replied that he had not. “But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.” Mr. Bennet made no answer. “Do not you want to know who has taken it?” cried his wife, impatiently. “You want to tell me, and I have no objection to hearing it.” This was invitation enough. “Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.” “What is his name?” “Bingley.” “Is he married or single?” “Oh, single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!” “How so? how can it affect them?” “My dear Mr. Bennet,” replied his wife, “how can you be so tiresome? You must know that I am thinking of his marrying one of them.” “Is that his design in settling here?” “Design? Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.” “I see no occasion for that. You and the girls may go--or you may send them by themselves, which perhaps will be still better; for as you are as handsome as any of them, Mr. Bingley might like you the best of the party.” “My dear, you flatter me. I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now. When a woman has five grown-up daughters, she ought to give over thinking of her own beauty.” “In such cases, a woman has not often much beauty to think of.” “But, my dear, you must indeed go and see Mr. Bingley when he comes into the neighbourhood.” “It is more than I engage for, I assure you.” “But consider your daughters. Only think what an establishment it would be for one of them. Sir William and Lady Lucas are determined to go, merely on that account; for in general, you know, they visit no new comers. Indeed you must go, for it will be impossible for us to visit him, if you do not.” “You are over scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls--though I must throw in a good word for my little Lizzy.” “I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.” “They have none of them much to recommend them,” replied he: “they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.” “Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion on my poor nerves.” “You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these twenty years at least.” “Ah, you do not know what I suffer.” “But I hope you will get over it, and live to see many young men of four thousand a year come into the neighbourhood.” “It will be no use to us, if twenty such should come, since you will not visit them.” “Depend upon it, my dear, that when there are twenty, I will visit them all.” Mr. Bennet was so odd a mixture of quick parts, sarcastic humour, reserve, and caprice, that the experience of three-and-twenty years had been insufficient to make his wife understand his character. Her mind was less difficult to develope. She was a woman of mean understanding, little information, and uncertain temper. When she was discontented, she fancied herself nervous. The business of her life was to get her daughters married: its solace was visiting and news. Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it. It was then disclosed in the following manner. Observing his second daughter employed in trimming a hat, he suddenly addressed her with, “I hope Mr. Bingley will like it, Lizzy.” “We are not in a way to know what Mr. Bingley likes,” said her mother, resentfully, “since we are not to visit.” “But you forget, mamma,” said Elizabeth, “that we shall meet him at the assemblies, and that Mrs. Long has promised to introduce him.” “I do not believe Mrs. Long will do any such thing. She has two nieces of her own. She is a selfish, hypocritical woman, and I have no opinion of her.” “No more have I,” said Mr. Bennet; “and I am glad to find that you do not depend on her serving you.” Mrs. Bennet deigned not to make any reply; but, unable to contain herself, began scolding one of her daughters. “Don’t keep coughing so, Kitty, for heaven’s sake! Have a little compassion on my nerves. You tear them to pieces.” “Kitty has no discretion in her coughs,” said her father; “she times them ill.” “I do not cough for my own amusement,” replied Kitty, fretfully. “When is your next ball to be, Lizzy?” “To-morrow fortnight.” “Ay, so it is,” cried her mother, “and Mrs. Long does not come back till the day before; so, it will be impossible for her to introduce him, for she will not know him herself.” “Then, my dear, you may have the advantage of your friend, and introduce Mr. Bingley to her.” “Impossible, Mr. Bennet, impossible, when I am not acquainted with him myself; how can you be so teasing?” “I honour your circumspection. A fortnight’s acquaintance is certainly very little. One cannot know what a man really is by the end of a fortnight. But if we do not venture, somebody else will; and after all, Mrs. Long and her nieces must stand their chance; and, therefore, as she will think it an act of kindness, if you decline the office, I will take it on myself.” The girls stared at their father. Mrs. Bennet said only, “Nonsense, nonsense!” “What can be the meaning of that emphatic exclamation?” cried he. “Do you consider the forms of introduction, and the stress that is laid on them, as nonsense? I cannot quite agree with you there. What say you, Mary? For you are a young lady of deep reflection, I know, and read great books, and make extracts.” Mary wished to say something very sensible, but knew not how. “While Mary is adjusting her ideas,” he continued, “let us return to Mr. Bingley.” “I am sick of Mr. Bingley,” cried his wife. “I am sorry to hear that; but why did you not tell me so before? If I had known as much this morning, I certainly would not have called on him. It is very unlucky; but as I have actually paid the visit, we cannot escape the acquaintance now.” The astonishment of the ladies was just what he wished--that of Mrs. Bennet perhaps surpassing the rest; though when the first tumult of joy was over, she began to declare that it was what she had expected all the while. “How good it was in you, my dear Mr. Bennet! But I knew I should persuade you at last. I was sure you loved your girls too well to neglect such an acquaintance. Well, how pleased I am! And it is such a good joke, too, that you should have gone this morning, and never said a word about it till now.” “Now, Kitty, you may cough as much as you choose,” said Mr. Bennet; and, as he spoke, he left the room, fatigued with the raptures of his wife. “What an excellent father you have, girls,” said she, when the door was shut. “I do not know how you will ever make him amends for his kindness; or me either, for that matter. At our time of life, it is not so pleasant, I can tell you, to be making new acquaintances every day; but for your sakes we would do anything. Lydia, my love, though you are the youngest, I dare say Mr. Bingley will dance with you at the next ball.” “Oh,” said Lydia, stoutly, “I am not afraid; for though I am the youngest, I’m the tallest.” The rest of the evening was spent in conjecturing how soon he would return Mr. Bennet’s visit, and determining when they should ask him to dinner.'},
+  {title:'이상한 나라의 앨리스', img:'book1_2.png', text:'Chapter I The grass had the exact green of an unkept promise when Alice stepped across the little stile and found the world neatly misfolded. Trees leaned at courteous angles, and the path wrote itself ahead of her as if a pen, dipped in afternoon, were composing a very patient sentence. She supposed that this was what happened when a map fell asleep and dreamed of the territory. In any case, there was nothing for it but to go on, for going on was the primary business of children and clocks. Presently she came to a door set into a hedge, a sensible door with a brass knob and a quite unreasonable keyhole shaped like a question mark. The door said knock, which she considered bossy, so she knocked twice to be safe. The hedge rustled with the sound of small rules changing their minds, and a rabbit appeared wearing a waistcoat the color of borrowed sugar. You are late, said the rabbit, though he had no watch, and Alice apologized on behalf of everybody, which seemed fairest. Inside the hedge was a hall that resembled a memory of school: lamps that hummed the alphabet, portraits that graded you with their eyes, and a floor that squeaked whenever you thought an improper thought. She very carefully did not think of cake. A table stood in the middle, just low enough to be proud of it. On it, a bottle declared Drink me in quite polite letters. I do not drink instructions, said Alice, so the bottle changed its mind and declared Perhaps, if you like. It tasted faintly of something she would miss later. Chapter II Shrinking is chiefly a matter of perspective, which is why Alice did not notice until the table grew as proud as a cathedral. There was a little key now within reach, and a new door no larger than a thimble of rain. Beyond it lay a garden of arithmetic: tulips arranged in sums, hedges trimmed into tidy theorems, and bees that carried the remainder from flower to flower so everything worked out gracefully. What a comfort it is when a garden knows its business, Alice thought. A gentleman in a velvet hat was seated upon a mushroom, reading a very thin newspaper. The headlines reported that Somebody had done Something to Someone, which seemed to satisfy the day entirely. Who are you, asked the gentleman, but kindly, as if the answer would not be graded. Today, said Alice, I am a provisional arrangement. He nodded gravely. I am much the same. A tea table drifted in like a well meaning cloud. At it sat a Hatter who had misplaced his certainty, a Hare who looked as if sleep were a rumor, and a Dormouse who snored in a grammatical way, pausing properly for commas. Have some time, the Hatter offered, and pushed a saucer toward her on which minutes lay, crisp as biscuits. Do they keep, she asked. Only if you do not spend them, he said. But we always spend them here, otherwise the day would be too rich. Chapter III There are courts one enters to be judged and courts one enters to remember how to stand upright. The Queen kept the latter. She strode about her lawn issuing verdicts on the weather, sentencing clouds to become geese, and commuting breezes to whispers. What has she done, the Queen asked, pointing at Alice with a scepter that looked suspiciously like a spoon. I have grown and I have not, said Alice, which was both true and unhelpful. The court gasped because honesty was considered a daring fashion. Witnesses appeared: a card who had been bent in the middle by a difficult Tuesday, a flamingo who testified in pink paragraphs, and the White Rabbit, who produced from his waistcoat a list of alleged possibilities. The evidence pointed in several directions at once, which is what good evidence knows to do. The jury, composed of creatures who were trying their best at being creatures, withdrew into a hat and returned with a verdict tied in ribbon. Guilty of continuity, they announced. The Queen smiled as if she had invented consequence. Off with her head, she declared, and everyone applauded the sentence because it sounded so definitive, like the end of a chapter. But Alice discovered that keeping one’s head is largely a matter of remembering one has one. She thought of breakfast, of the good butter and the cheerful knife, and her head stayed where it had always been, above her worries and beneath her curiosity. At this the court fell into a pleasant confusion, and the day changed the subject. Chapter IV A child may wake by degrees and still not be sure of it. The garden was now only a memory of perfume, the tea only a rumor of a warmth the hands believed in. Alice climbed back through the keyhole of afternoon and found herself beside the stile, the grass its old familiar green, the sky agreeing to remain. She checked her pockets and discovered a spoon, a small question mark, and three and a half minutes left over from tea. She set the minutes on her palm and watched them tick away like tidy beetles. It was a very good day, she decided, because it had made room for her without asking who she would be tomorrow. Then she went home the ordinary way, which is to say bravely.'},
+  {title:'프랑켄슈타인', img:'book1_3.png', text:'A MODERN PROMETHEUS, IN A LOW VOICE — Letter I My dear sister, it is a cold that argues with the bone, and the sea keeps its counsel as only distances can. I write to you from a ship built of stubborn wood and better intentions. There is ice on the horizon and something like a promise in the air. I have gathered men who believe in circles drawn on maps, and I have hardened them with stories about north. I would tell you all of it if I thought language could do more than pant after the truth. Yesterday, upon a sheet of ice so broad it forgot how to float, we saw a figure running as if chased by a rumor. He was wrapped in furs and in a resolve that burned brighter than any lamp. We took him aboard and fed him warmth in a cup. He said his name and I forgot it at once, so fierce was the name it hunted. He told me of thunder tamed to domestic duty, of a laboratory lit by a fever only one man had caught, and of a creature who had learned too quickly the rudeness of being seen. Chapter I I loved knowledge the way the sea loves soundings, not for correction but for the bracing touch of measure. I made a bride of curiosity and signed our vows with lightning. When at last the miracle fell breathing upon my table, I saw in its waking a mirror of my boldness and a caricature of my compassion. I called it beautiful and then I called it mine and then I called it monstrous, for names are the first instruments we lift when we do not know what to do with our hands. It learned the alphabet of the world the hard way, which is to say it began with hunger. Doors fled from it, faces organized themselves into fear. It adopted the countryside and the night, and in both it became a rumor with footsteps. I studied silence like a second science, but silence has never cured an invention. Chapter II It spoke at last, and the voice was not thunder but literature. I have observed, it said, that happiness is a domestic architecture built of kindnesses the size of teaspoons. In the window of a cottage I learned letters by eavesdropping on philanthropy. I admired how they called each other by names that forgave, and how bread can be broken without first breaking the giver. I longed to be seen as a verb rather than a noun. When I presented myself, the sentence failed. They saw in me a summary of intentions they had not intended to possess. The old man believed me because blindness is another way of reading. The others saw me because sight is impatient. I fled, but flight keeps pace with its origins. Chapter III There are tragedies born of design and tragedies born of inventory. Mine was the second. I had the parts and not the patience, the method and not the mercy. When the creature demanded fellowship, I pretended to weigh ethics when I was only weighing fear. I set to work nonetheless, for even the terrified grow industrious under the lash of consequence. In a room by the sea, with wind for a witness, I assembled a companion whose heart would be a negotiated instrument. I unmade her before she drew a full breath. The creature watched through a window set at the height of my shame. His face held a grammar I had not yet invented the apology for. He turned away with the dignity of a sentence that refuses an unworthy period. After that, what remained was pursuit and weather. Chapter IV The north receives all brands of stubbornness and tests them with the same white hand. I followed because a man must, and because repentance likes an audience of extremes. On the ice I learned the arithmetic of exhaustion, how a day can be divided into steps, and steps into breaths, and breaths into the admission that one is late to one’s own conscience. When at last we came to terms, I found in him not a monster but a theory of loneliness written out in scars. If you see me in your thoughts, dear sister, let it be at a desk in some kinder latitude, writing a syllabus for a mercy I did not take soon enough.'},
+  {title:'도리언 그레이의 초상', img:'book1_4.png', text:'Chapter I When the painter first asked him to sit, the room was already full of accurate light. It weighed each object and pronounced it worth the trouble. The model sat because sitting seemed the easiest way to be admired without speaking. The painter worked like a priest who had decided to rescue the divine by exact description. His friend, who had the gift of saying wicked things as if they were observations, smiled in a corner and let the afternoon become a knife. You will never be as forgiven as you are now, the friend said lightly. The canvas listened with attention. The subject laughed and threw his youth about like a scarf. Chapter II There are bargains written in the subtle ink of wishes. The canvas took them down without comment. When at last the portrait stared back with more candor than its subject, the room trembled slightly, as if the architecture were surprised at its own honesty. The subject discovered that to remain untroubled in the mirror is not the same as remaining innocent, but he preferred the synonym to the truth. He learned how to lean against the evening until it gave up its flavor. He learned how to be adored without accumulating gratitude, which is a very modern talent. Chapter III Society opened to him like a well snared fan. He moved through drawing rooms that burned with gentle cruelty, where laughter had the brightness of a gem and the temperature of snow. He acquired the habit of arriving late, which is the poor man’s version of destiny. Rumors rose behind him and fell away, each with a small sound like the shutting of a velvet box. Somewhere in the house where he kept his afternoons, a door remained locked, and behind it the picture studied him the way time studies us, patiently and with a long memory. Chapter IV He tried love once, or said he did. It went as all beautiful errors go, deeply and with excellent manners. When it ended, he attributed the ruin to sincerity, which is a common superstition among those who have rehearsed their charm. The portrait accepted another layer of dark grammar. To his unwrinkled face the world offered absolution; to the painted one, the world sent accurate bills. It is possible to be admired into a species of vacancy. He grew skilled at it, cultivated absence in the midst of attention. In the locked room the colors thickened like secrets, and the mouth of the painted youth considered cruelty as an art. Chapter V The night he finally turned the key he did it with theatrical caution, like a man stealing from himself. He lifted the cloth and confronted an education in consequences. The portrait did not accuse; it described. He raged, which is to say he confessed. The knife he held was a very clean idea. When he drove it where his fear instructed, the body that fell was unfamiliar: a stranger grown old in a hurry, a lesson completed too thoroughly. They found him at dawn and pitied him correctly. In the upper room the portrait had resumed its first language, youth arranged as a thesis. The painter wept because accuracy can be a sin.'},
+  {title:'돈키호테', img:'book1_5.png', text:'Book I Upon a plain the color of uncorrected parchment rode a gentleman armored chiefly in metaphors. His horse bore the name of a memory and his lance the weight of a purpose borrowed from an older century. He had read too many books, which is to say he had educated his desire until it confused itself with duty. Windmills, seeing him approach, held very still the way guilty giants do in polite company. His squire followed with the patience of practical men, carrying the inventory of needed disillusions. Master, he said, it is wind that turns those arms, not villainy. The knight considered this and improved it. Then it is a conspiracy of air, he decided, and lowered his lance with the courtesy of an argument that intends to fail splendidly. Book II He made vows at dawn and broke them at noon so he might make better vows by evening. He believed in ladies because a man should, and in honor because a man must, and in stories because life is too stingy with pageantry. Inns became castles under the moral pressure of his gaze. Mule drivers were knights in distress. Barbers owned enchanted helmets. The world humored him as a village tolerates its bell, for the sound is absurd but undeniably organizes the day. His squire, who had a family where his master had an idea, kept accounts of injuries and breakfasts. Reality, when consulted, declined to be improved upon, but it admired the knight’s stamina and did not push him down more often than was necessary. Book III There came a day when return looked like wisdom, which is how you know a story is maturing. They went home the long way so that he might rescue a few more misapprehensions and confess to a dozen sunsets. On the final hill he removed his helmet and found beneath it an older man who had been waiting to be recognized. He made peace with the stubbornness that had worn his name and lay down upon a bed that had never doubted him. The squire wept the way a practical man does, with receipts and good bread. The village murmured that it had loved him all along, in the way one loves a bell that made sense of noon. The windmills turned in the courteous distance, unconquered and entirely forgiven.'},
+  {title:'모비 딕', img:'book1_6.png', text:'Chapter I Call me anyone, for the ocean cares little for proper nouns. When my pocket grew light and my heart heavier than ships have any right to be, I went to the water to trade my uncertainties for wages. The harbor gave me a lesson in rigging and in human voices. A man may be forgiven for almost any sin if he can tie three knots quickly, and I was in the market for forgiveness. The vessel I chose was square in the shoulders and full of scripture. Its master spoke in verses, his eyes nailed to a horizon that had wronged him long ago. He kept a map not of the ocean but of his own grievance, and he traced it nightly with a finger that had learned to count in scars. We shipped out on a wind that believed us, which is the sweetest start. Chapter II Sailors invent a family of each other and swear loyalties with salted bread. Among us moved a quiet man who accounted for the soul by tapping upon its case. There was another who prayed with a harpoon and meant it. The nights stitched themselves into a sermon. Stars took attendance and the sea graded our courage without malice. The white thing we hunted existed as a rumor of vastness, an algebra of muscle, a correction in the body of the deep. Our captain spoke its name the way a man curses the mirror. In that naming I heard not hatred but a hunger for symmetry. Men will exhaust the world to be agreed with. Chapter III Storm, when it came, did not so much attack as instruct. The deck learned to be a question. We were examined in water and in the alphabet of fear. The mast wrote its long sentence upon the gale and the sails tried to read it aloud. In the heart of the weather, the captain stood correct and terrible, as if finally reunited with the grammar he had been lonely for. After, the ocean forgave us in its usual manner, by pretending it had not noticed. We mended everything that could be stitched and invented new names for the rest. From the crow’s nest a boy shouted that certainty had broken the surface. The old man smiled like a door closing. Chapter IV You know the ending, though endings belong to the sea and not to us. The whale arrived like an argument too big for the room. We flung our iron and our intentions. The ocean adjudicated. When the last coil sang out and the boat wore its red idea, I saw in the eye of the beast not malice but a reflection of our wanting. The captain achieved his thesis, which looked very much like vanishing. I floated on a coffin that had been meant for another man. The sky reconsidered the day. A ship, compassionate and punctual, adopted me from the water and taught me how to sleep again. I have kept the story not to warn or to astonish, but because memory is the only harbor that will have me now.'},
+  {title:'전쟁과 평화', img:'book1_7.png', text:'“Well, Prince, so Genoa and Lucca are now just family estates of the Buonapartes. But I warn you, if you don’t tell me that this means war, if you still try to defend the infamies and horrors perpetrated by that Antichrist—I really believe he is Antichrist—I will have nothing more to do with you and you are no longer my friend, no longer my ‘faithful slave,’ as you call yourself! But how do you do? I see I have frightened you—sit down and tell me all the news.” It was in July, 1805, and the speaker was the well-known Anna Pávlovna Schérer, maid of honor and favorite of the Empress Márya Fëdorovna. With these words she greeted Prince Vasíli Kurágin, a man of high rank and importance, who was the first to arrive at her reception. Anna Pávlovna had had a cough for some days. She was, as she said, suffering from la grippe; grippe being then a new word in St. Petersburg, used only by the elite. All her invitations without exception, written in French, and delivered by a scarlet-liveried footman that morning, ran as follows: “If you have nothing better to do, Count (or Prince), and if the prospect of spending an evening with a poor invalid is not too terrible, I shall be very charmed to see you tonight between 7 and 10—Annette Schérer.” “Heavens! what a virulent attack!” replied the prince, not in the least disconcerted by this reception. He had just entered, wearing an embroidered court uniform, knee breeches, and shoes, and had stars on his breast and a serene expression on his flat face. He spoke in that refined French in which our grandfathers not only spoke but thought, and with the gentle, patronizing intonation natural to a man of importance who had grown old in society and at court. He went up to Anna Pávlovna, kissed her hand, presenting to her his bald, scented, and shining head, and complacently seated himself on the sofa. “First of all, dear friend, tell me how you are. Set your friend’s mind at rest,” said he without altering his tone, beneath the politeness and affected sympathy of which indifference and even irony could be discerned. “Can one be well while suffering morally? Can one be calm in times like these if one has any feeling?” said Anna Pávlovna. “You are staying the whole evening, I hope?” “And the fete at the English ambassador’s? Today is Wednesday. I must put in an appearance there,” said the prince. “My daughter is coming for me to take me there.” “I thought today’s fete had been canceled. I confess all these festivities and fireworks are becoming wearisome.” “If they had known that you wished it, the entertainment would have been put off,” said the prince, who, like a wound-up clock, by force of habit said things he did not even wish to be believed. “Don’t tease! Well, and what has been decided about Novosíltsev’s dispatch? You know everything.” “What can one say about it?” replied the prince in a cold, listless tone. “What has been decided? They have decided that Buonaparte has burnt his boats, and I believe that we are ready to burn ours.” Prince Vasíli always spoke languidly, like an actor repeating a stale part. Anna Pávlovna Schérer on the contrary, despite her forty years, overflowed with animation and impulsiveness. To be an enthusiast had become her social vocation and, sometimes even when she did not feel like it, she became enthusiastic in order not to disappoint the expectations of those who knew her. The subdued smile which, though it did not suit her faded features, always played round her lips expressed, as in a spoiled child, a continual consciousness of her charming defect, which she neither wished, nor could, nor considered it necessary, to correct. In the midst of a conversation on political matters Anna Pávlovna burst out: “Oh, don’t speak to me of Austria. Perhaps I don’t understand things, but Austria never has wished, and does not wish, for war. She is betraying us! Russia alone must save Europe. Our gracious sovereign recognizes his high vocation and will be true to it. That is the one thing I have faith in! Our good and wonderful sovereign has to perform the noblest role on earth, and he is so virtuous and noble that God will not forsake him. He will fulfill his vocation and crush the hydra of revolution, which has become more terrible than ever in the person of this murderer and villain! We alone must avenge the blood of the just one.... Whom, I ask you, can we rely on?... England with her commercial spirit will not and cannot understand the Emperor Alexander’s loftiness of soul. She has refused to evacuate Malta. She wanted to find, and still seeks, some secret motive in our actions. What answer did Novosíltsev get? None. The English have not understood and cannot understand the self-abnegation of our Emperor who wants nothing for himself, but only desires the good of mankind. And what have they promised? Nothing! And what little they have promised they will not perform! Prussia has always declared that Buonaparte is invincible, and that all Europe is powerless before him.... And I don’t believe a word that Hardenburg says, or Haugwitz either. This famous Prussian neutrality is just a trap. I have faith only in God and the lofty destiny of our adored monarch. He will save Europe!” She suddenly paused, smiling at her own impetuosity. “I think,” said the prince with a smile, “that if you had been sent instead of our dear Wintzingerode you would have captured the King of Prussia’s consent by assault. You are so eloquent. Will you give me a cup of tea?” “In a moment. À propos,” she added, becoming calm again, “I am expecting two very interesting men tonight, le Vicomte de Mortemart, who is connected with the Montmorencys through the Rohans, one of the best French families. He is one of the genuine émigrés, the good ones. And also the Abbé Morio. Do you know that profound thinker? He has been received by the Emperor. Had you heard?” “I shall be delighted to meet them,” said the prince. “But tell me,” he added with studied carelessness as if it had only just occurred to him, though the question he was about to ask was the chief motive of his visit, “is it true that the Dowager Empress wants Baron Funke to be appointed first secretary at Vienna? The baron by all accounts is a poor creature.” Prince Vasíli wished to obtain this post for his son, but others were trying through the Dowager Empress Márya Fëdorovna to secure it for the baron. Anna Pávlovna almost closed her eyes to indicate that neither she nor anyone else had a right to criticize what the Empress desired or was pleased with. “Baron Funke has been recommended to the Dowager Empress by her sister,” was all she said, in a dry and mournful tone. As she named the Empress, Anna Pávlovna’s face suddenly assumed an expression of profound and sincere devotion and respect mingled with sadness, and this occurred every time she mentioned her illustrious patroness. She added that Her Majesty had deigned to show Baron Funke beaucoup d’estime, and again her face clouded over with sadness. The prince was silent and looked indifferent. But, with the womanly and courtierlike quickness and tact habitual to her, Anna Pávlovna wished both to rebuke him (for daring to speak as he had done of a man recommended to the Empress) and at the same time to console him, so she said: “Now about your family. Do you know that since your daughter came out everyone has been enraptured by her? They say she is amazingly beautiful.” The prince bowed to signify his respect and gratitude. “I often think,” she continued after a short pause, drawing nearer to the prince and smiling amiably at him as if to show that political.'},
+  {title:'셜록 홈즈의 모험', img:'book1_8.png', text:'I. To Sherlock Holmes she is always the woman. I have seldom heard him mention her under any other name. In his eyes she eclipses and predominates the whole of her sex. It was not that he felt any emotion akin to love for Irene Adler. All emotions and that one particularly were abhorrent to his cold precise but admirably balanced mind. He was I take it the most perfect reasoning and observing machine that the world has seen but as a lover he would have placed himself in a false position. He never spoke of the softer passions save with a gibe and a sneer. They were admirable things for the observer-excellent for drawing the veil from mens motives and actions. But for the trained reasoner to admit such intrusions into his own delicate and finely adjusted temperament was to introduce a distracting factor which might throw a doubt upon all his mental results. Grit in a sensitive instrument or a crack in one of his own high-power lenses would not be more disturbing than a strong emotion in a nature such as his. And yet there was but one woman to him and that woman was the late Irene Adler of dubious and questionable memory. I had seen little of Holmes lately. My marriage had drifted us away from each other. My own complete happiness and the home-centred interests which rise up around the man who first finds himself master of his own establishment were sufficient to absorb all my attention while Holmes who loathed every form of society with his whole Bohemian soul remained in our lodgings in Baker Street buried among his old books and alternating from week to week between cocaine and ambition the drowsiness of the drug and the fierce energy of his own keen nature. He was still as ever deeply attracted by the study of crime and occupied his immense faculties and extraordinary powers of observation in following out those clues and clearing up those mysteries which had been abandoned as hopeless by the official police. From time to time I heard some vague account of his doings of his summons to Odessa in the case of the Trepoff murder of his clearing up of the singular tragedy of the Atkinson brothers at Trincomalee and finally of the mission which he had accomplished so delicately and successfully for the reigning family of Holland. Beyond these signs of his activity however which I merely shared with all the readers of the daily press I knew little of my former friend and companion. One night—it was on the twentieth of March 1888—I was returning from a journey to a patient (for I had now returned to civil practice) when my way led me through Baker Street. As I passed the well-remembered door which must always be associated in my mind with my wooing and with the dark incidents of the Study in Scarlet I was seized with a keen desire to see Holmes again and to know how he was employing his extraordinary powers...'},
+  {title:'변신', img:'book1_9.png', text:'Section I When he woke that morning he noticed first the grammar of his body had changed. Verbs had grown heavy, adjectives too many-legged, the syntax of his limbs an arrangement he could not parse. He lay on his back and translated himself as best he could. The ceiling, indifferent to the news, held steady. Somewhere in the apartment, clocks continued with their ordinary arrogance. He tried his new vocabulary. It clicked and scraped but did not quite say what he meant. The door grew thoughtful at the sound. From beyond it came the household’s rehearsed concern, its love which was real and its panic which was also real. How are you, they asked through the wood, and he remembered how warily language approaches suffering. Section II The office sent inquiries printed in black courtesy. He imagined the desk that had consented to his life all these years, the window that had tolerated his gazing, the hat on its peg dreaming of streets. He thought how easily a man becomes a permission, and how quickly a permission can be revoked. He composed a letter in his head apologizing to everyone for the inconvenience of his new noun. Meanwhile hunger kept ordinary hours, and thirst behaved itself. He could not decide if this was mercy or mockery. The world has many talents. Section III Visitors arrived armed with explanations. One brought religion folded neatly and left it upon the chair. Another brought a diagnosis polished to a high shine. A third offered hope in the future tense, which is the lightest luggage. He accepted them all and ate none of them. At night, sleep came compliantly, that old servant, and performed its single trick. In dreams he wore his former name and it fit almost. Section IV Days collected themselves into something like a posture. He mastered the art of stillness until it nearly became elegance. Through the window lived a small republic of neighbors. A violin practiced forgiveness. A child argued with new shoes. The weather demonstrated several bright solutions to the problem of silence. He learned that invisibility, if carried correctly, could be worn with a little dignity. Section V One evening the door opened without ceremony. The room received a tide of faces that had loved him honestly and imperfectly. They spoke in plurals, as families do when the singular risks a fall. We will manage, they said, and We must, and Forgive us, and We forgive you too. He understood that every sentence was both a bed and a blade. After they left, the city remembered him by means of distant traffic. He listened until the noise became a kind of lullaby for objects. He slept not as a man sleeps but as a noun rests, carefully, so it will be the same word in the morning. Section VI You expect a moral and I have none. Transformation is not a sermon but a weather. He discovered at last that the world possesses a patience we mistake for cruelty, and that bodies are commas in a paragraph continuously revised. When the end came it was not catastrophic but grammatical. The day placed a period where he would have preferred an ellipsis. It was not unkind. It was only correct. The room exhaled. The door stood open for a very long time, and no one quite knew whether that meant invitation or conclusion. Somewhere the violin found its pitch, the child mastered the shoes, and the city grew dark in a manner practiced and grand. I tell you this because stories are the last furniture to leave a room, and someone must carry them down the stairs.'},
+  {title:'위대한 개츠비', img:'book1_10.png', text:'“It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife. However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered as the rightful property of some one or other of their daughters. “My dear Mr. Bennet,” said his lady to him one day, “have you heard that Netherfield Park is let at last?” Mr. Bennet replied that he had not. “But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.” Mr. Bennet made no answer. “Do not you want to know who has taken it?” cried his wife, impatiently. “You want to tell me, and I have no objection to hearing it.” This was invitation enough. “Why, my dear, you must know, Mrs. Long says that Netherfield is taken by a young man of large fortune from the north of England; that he came down on Monday in a chaise and four to see the place, and was so much delighted with it that he agreed with Mr. Morris immediately; that he is to take possession before Michaelmas, and some of his servants are to be in the house by the end of next week.” “What is his name?” “Bingley.” “Is he married or single?” “Oh, single, my dear, to be sure! A single man of large fortune; four or five thousand a year. What a fine thing for our girls!” “How so? how can it affect them?” “My dear Mr. Bennet,” replied his wife, “how can you be so tiresome? You must know that I am thinking of his marrying one of them.” “Is that his design in settling here?” “Design? Nonsense, how can you talk so! But it is very likely that he may fall in love with one of them, and therefore you must visit him as soon as he comes.” “I see no occasion for that. You and the girls may go—or you may send them by themselves, which perhaps will be still better; for as you are as handsome as any of them, Mr. Bingley might like you the best of the party.” “My dear, you flatter me. I certainly have had my share of beauty, but I do not pretend to be anything extraordinary now. When a woman has five grown-up daughters, she ought to give over thinking of her own beauty.” “In such cases, a woman has not often much beauty to think of.” “But, my dear, you must indeed go and see Mr. Bingley when he comes into the neighbourhood.” “It is more than I engage for, I assure you.” “But consider your daughters. Only think what an establishment it would be for one of them. Sir William and Lady Lucas are determined to go, merely on that account; for in general, you know, they visit no new comers. Indeed you must go, for it will be impossible for us to visit him, if you do not.” “You are over scrupulous, surely. I dare say Mr. Bingley will be very glad to see you; and I will send a few lines by you to assure him of my hearty consent to his marrying whichever he chooses of the girls—though I must throw in a good word for my little Lizzy.” “I desire you will do no such thing. Lizzy is not a bit better than the others: and I am sure she is not half so handsome as Jane, nor half so good-humoured as Lydia. But you are always giving her the preference.” “They have none of them much to recommend them,” replied he: “they are all silly and ignorant like other girls; but Lizzy has something more of quickness than her sisters.” “Mr. Bennet, how can you abuse your own children in such a way? You take delight in vexing me. You have no compassion on my poor nerves.” “You mistake me, my dear. I have a high respect for your nerves. They are my old friends. I have heard you mention them with consideration these twenty years at least.” “Ah, you do not know what I suffer.” “But I hope you will get over it, and live to see many young men of four thousand a year come into the neighbourhood.” “It will be no use to us, if twenty such should come, since you will not visit them.” “Depend upon it, my dear, that when there are twenty, I will visit them all.” Mr. Bennet was so odd a mixture of quick parts, sarcastic humour, reserve, and caprice, that the experience of three-and-twenty years had been insufficient to make his wife understand his character. Her mind was less difficult to develope. She was a woman of mean understanding, little information, and uncertain temper. When she was discontented, she fancied herself nervous. The business of her life was to get her daughters married: its solace was visiting and news. Mr. Bennet was among the earliest of those who waited on Mr. Bingley. He had always intended to visit him, though to the last always assuring his wife that he should not go; and till the evening after the visit was paid she had no knowledge of it. It was then disclosed in the following manner. Observing his second daughter employed in trimming a hat, he suddenly addressed her with,—“I hope Mr. Bingley will like it, Lizzy.” “We are not in a way to know what Mr. Bingley likes,” said her mother, resentfully, “since we are not to visit.” “But you forget, mamma,” said Elizabeth, “that we shall meet him at the assemblies, and that Mrs. Long has promised to introduce him.” “I do not believe Mrs. Long will do any such thing. She has two nieces of her own. She is a selfish, hypocritical woman, and I have no opinion of her.” “No more have I,” said Mr. Bennet; “and I am glad to find that you do not depend on her serving you.” Mrs. Bennet deigned not to make any reply; but, unable to contain herself, began scolding one of her daughters. “Don’t keep coughing so, Kitty, for heaven’s sake! Have a little compassion on my nerves. You tear them to pieces.” “Kitty has no discretion in her coughs,” said her father; “she times them ill.” “I do not cough for my own amusement,” replied Kitty, fretfully. “When is your next ball to be, Lizzy?” “To-morrow fortnight.” “Ay, so it is,” cried her mother, “and Mrs. Long does not come back till the day before; so, it will be impossible for her to introduce him, for she will not know him herself.” “Then, my dear, you may have the advantage of your friend, and introduce Mr. Bingley to her.” “Impossible, Mr. Bennet, impossible, when I am not acquainted with him myself; how can you be so teasing?” “I honour your circumspection. A fortnight’s acquaintance is certainly very little. One cannot know what a man really is by the end of a fortnight. But if we do not venture, somebody else will; and after all, Mrs. Long and her nieces must stand their chance; and, therefore, as she will think it an act of kindness, if you decline the office, I will take it on myself.” The girls stared at their father. Mrs. Bennet said only, “Nonsense, nonsense!” “What can be the meaning of that emphatic exclamation?” cried he. “Do you consider the forms of introduction, and the stress that is laid on them, as nonsense? I cannot quite agree with you there. What say you, Mary? For you are a young lady of deep reflection, I know, and read great books, and make extracts.” Mary wished to say something very sensible, but knew not how. “While Mary is adjusting her ideas,” he continued, “let us return to Mr. Bingley.” “I am sick of Mr. Bingley,” cried his wife. “I am sorry to hear that; but why did you not tell me so before? If I had known as much this morning, I certainly would not have called on him. It is very unlucky; but as I have actually paid the visit, we cannot escape the acquaintance now.” The astonishment of the ladies was just what he wished—that of Mrs. Bennet perhaps surpassing the rest; though when the first tumult of joy was over, she began to declare that it was what she had expected all the while. “How good it was in you, my dear Mr. Bennet! But I knew I should persuade you at last. I was sure you loved your girls too well to neglect such an acquaintance. Well, how pleased I am! And it is such a good joke, too, that you should have gone this morning, and never said a word about it till now.” “Now, Kitty, you may cough as much as you choose,” said Mr. Bennet; and, as he spoke, he left the room, fatigued with the raptures of his wife. “What an excellent father you have, girls,” said she, when the door was shut. “I do not know how you will ever make him amends for his kindness; or me either, for that matter. At our time of life, it is not so pleasant, I can tell you, to be making new acquaintances every day; but for your sakes we would do anything. Lydia, my love, though you are the youngest, I dare say Mr. Bingley will dance with you at the next ball.” “Oh,” said Lydia, stoutly, “I am not afraid; for though I am the youngest, I’m the tallest.” The rest of the evening was spent in conjecturing how soon he would return Mr. Bennet’s visit, and determining when they should ask him to dinner.'},
+];
+
+const SET_KR_MODERN=[
+  {title:'82년생 김지영', img:'book2_1.png', text:'김지영 씨는 우리 나이로 서른네 살이다. 그 이후로도 이상한 징후들은 조금씩 있었다. 평소에는 쓰지도 않는 귀여운 이모티콘을 잔뜩 섞어 메시지를 보내기도 했고, 분명 김지영 씨의 솜씨도 취향도 아닌 사골국이나 잡채 같은 음식을 만들기도 했다. 정대현 씨는 자꾸만 아내가 낯설어졌다. 아내가, 2년을 열렬히 연애하고 또 3년을 같이 산, 빗방울처럼 많은 이야기를 나누고, 눈송이처럼 서로를 쓰다듬었던, 자신들을 반씩 닮은 예쁜 딸을 낳은 아내가, 아무래도 아내 같지가 않았다. 순간 김지영 씨의 두 볼에 사르르 홍조가 돌더니 표정이 부드러워지고 눈빛은 따뜻해졌다. 정대현 씨는 불안했다. 하지만 화제를 돌리거나 아내를 끌어낼 틈도 없이 김지영 씨가 대답했다. “아이고 사부인, 사실 우리 지영이 명절마다 몸살이에요.” 잠시 아무도 숨을 쉬지 않았다. 거대한 빙하 위에 온 가족이 앉아 있는 것 같았다. “은영 아빠가 나 고생시키는 게 아니라 그냥 우리 둘이 고생하는 거야. 미안해하지 않아도 되니까 혼자 이 집안 떠메고 있는 것처럼 앓는 소리 좀 하지 마. 그러라고 한 사람도 없고, 솔직히, 그러고 있지도 않잖아.” “처음부터 잘하는 사람이 있나요. 다 하면서 배우는 거죠. 지영이가 잘할 거예요.” 아니요, 어머니, 저 잘할 자신 없는대요. 그런 건 자취하는 오빠가 더 잘하고요, 결혼하고도 자기가 알아서 한다고 했어요. 하지만 김지영 씨도, 정대현 씨도, 말없이 미소만 지었다. 세상이 참 많이 바뀌었다. 하지만 그 안의 소소한 규칙이나 약속이나 습관들은 크게 바뀌지 않았다. 김지영 씨는 혼인신고를 하면 마음가짐이 달라진다는 정대현 씨의 말을 다시 한번 곱씹었다. 법이나 제도가 가치관을 바꾸는 것일까, 가치관이 법과 제도를 견인하는 것일까. 김지영 씨가 회사를 그만둔 2014년, 대한민국 기혼 여성 다섯 명 중 한 명은 결혼, 임신, 출산, 어린 자녀의 육아와 교육 때문에 직장을 그만두었다. 한국 여성의 경제활동 참가율은 출산기 전후로 현저히 낮아지는데, 20~29세 여성의 63.8퍼센트가 경제활동에 참가하다가 30~39세에는 58퍼센트로 하락하고, 40대부터 다시 66.7퍼센트로 증가한다. 죽을 만큼 아프면서 아이를 낳았고, 내 생활도, 일도, 꿈도, 내 인생, 나 자신을 전부 포기하고 아이를 키웠어. 그랬더니 벌레가 됐어. 난 이제 어떻게 해야 돼?'},
+  {title:'채식주의자', img:'book2_2.png', text:'아내가 채식을 시작하기 전까지 나는 그녀가 특별한 사람이라고 생각한 적이 없었다. 어떤 고함이, 울부짖음이 겹겹이 뭉쳐져, 거기 박혀 있어. 고기 때문이야. 너무 많은 고기를 먹었어. 그 목숨들이 고스란히 그 자리에 걸려 있는 거야. 틀림없어. 피와 살은 모두 소화돼 몸 구석구석으로 흩어지고, 찌꺼기는 배설됐지만, 목숨들만은 끈질기게 명치에 달라붙어 있는 거야. 한번만, 단 한번만 크게 소리치고 싶어. 캄캄한 창밖으로 달려나가고 싶어. 그러면 이 덩어리가 몸 밖으로 뛰쳐나갈까. 그럴 수 있을까. 이 모든 것을 고요히 받아들이고 있는 그녀가 어떤 성스러운 것, 사람이라고도, 그렇다고 짐승이라고도 할 수 없는, 식물이며 동물이며 인간, 혹은 그 중간쯤의 낯선 존재처럼 느껴졌다. 언니. 영혜의 낡은 검은 스웨터에서 희미한 나프탈렌 냄새가 났다. 그녀가 대답하지 않자, 영혜는 한번 더 언니, 하고 속삭였다. 언니. ……세상의 나무들은 모두 형제 같아. 문득 이 세상을 살아본 적이 없다는 느낌이 드는 것에 그녀는 놀랐다. 사실이었다. 그녀는 살아본 적이 없었다. 기억할 수 있는 오래전의 어린시절부터, 다만 견뎌왔을 뿐이었다. 그녀는 자신이 선량한 인간임을 믿었으며, 그 믿음대로 누구에게도 피해를 주지 않았다. 성실했고, 나름대로 성공했으며, 언제까지나 그럴 것이었다. 그러나 이해할 수 없는 일이었다. 그 후락한 가건물과 웃자란 풀들 앞에서 그녀는 단 한번도 살아본 적 없는 어린아이에 불과했다.'},
+  {title:'소년이 온다', img:'book2_3.png', text:'비가 올 것 같아. 너는 소리 내어 중얼거린다. 네가 죽은 뒤 장례식을 치르지 못해, 내 삶이 장례식이 되었다. 네가 방수 모포에 싸여 청소차에 실려간 뒤에. 용서할 수 없는 물줄기가 번쩍이며 분수대에서 뿜어져나온 뒤에. 어디서나 사원의 불빛이 타고 있었다. 봄에 피는 꽃들 속에, 눈송이들 속에, 날마다 찾아오는 저녁들 속에. 다 쓴 음료수 병에 네가 꽂은 양초 불꽃들이. 정말 닥쳐올 총살을 기다리듯 숨을 죽였습니다. 죽음은 새 수의같이 서늘한 것일지도 모른다고 그때 생각했습니다. 지나간 여름이 삶이었다면, 피고름과 땀으로 얼룩진 몸뚱이가 삶이었다면, 아무리 신음해도 흐르지 않던 일초들이, 치욕적인 허기 속에서 쉰 콩나물을 씹던 순간들이 삶이었다면, 죽음은 그 모든 걸 한번에 지우는 깨끗한 붓질 같은 것이라고. 정말 닥쳐올 총살을 기다리듯 숨을 죽였습니다. 죽음은 새 수의같이 서늘한 것일지도 모른다고 그때 생각했습니다. 지나간 여름이 삶이었다면, 피고름과 땀으로 얼룩진 몸뚱이가 삶이었다면, 아무리 신음해도 흐르지 않던 일초들이, 치욕적인 허기 속에서 쉰 콩나물을 씹던 순간들이 삶이었다면, 죽음은 그 모든 걸 한번에 지우는 깨끗한 붓질 같은 것이라고. 그 과정에서 네가 이해할 수 없었던 한가지 일은, 입관을 마친 뒤 약식으로 치른 짧은 추도식에서 유족들이 애국가를 부른다는 것이었다. ... 군인들이 죽인 사람들에게 왜 애국가를 불러주는 걸까. 왜 태극기로 관을 감싸는 걸까. 마치 나라가 그들을 죽인 게 아니라는 듯이. ... 군인들이 반란을 일으킨 거잖아, 권력을 잡으려고. 너도 봤을 거 아냐. 한낮에 사람들을 때리고 찌르고, 그래도 안되니까 총을 쐈잖아. 그렇게 하라고 그들이 명령한 거야. 그 사람들을 어떻게 나라라고 부를 수 있어. 용서하지 않을 거다. 이승에서 가장 끔찍한 것을 본 사람처럼 꿈적거리는 노인의 두 눈을 너는 마주 본다. 아무것도 용서하지 않을 거다. 나 자신까지도. 양심. 그래요, 양심. 세상에서 제일 무서운 게 그겁니다.'},
+  {title:'지구에서 한아뿐', img:'book2_4.png', text:'그러니까 이 모든 일은 결코 한아의 외모 때문에 벌어지지 않았다. “세상에 좋은 사람이 얼마나 많은데. 습관처럼 계속 만날 필요는 없어, 멈춰도 돼. 이 사람이 아니다 생각이 들면 언제든 멈추는 거야.” “한아를 위해서라면, 우주를 횡단할 만큼 전 확신이 있어요.” “바보 같다고 생각 안 해. 한 번도 너 바보 같다고 생각한 적 없어. 넌 같은 자리에 있는 걸 지키고 싶어하는 거잖아. 사람들이 너무 당연하게 여기는 것들, 소중하게 생각하지 않는 것들을. 난 너처럼 저탄소 생활을 하는 사람을 본 적이 없어.”“나도 저렇게 여기에 왔어. 2만 광년을, 너와 있기 위해 왔어.” 우주가 아무리 넓어도 직접 하지 않으면 안 되는 이야기들이 있으니까. 그거 알아? 내가 너한테 반하는 바람에, 우리 별 전체가 네 꿈을 꿨던 거? 그러니까, 웃기지? 나보다 내 망원경이 더 먼저 널 사랑한 거야. 너는 우주를 전혀 모르는데, 어떻게 우주를 넘어서는 걸까. 너는 너무 멀리 있는데, 나는 왜 널 가깝게 느낄까. 나쁜 새끼. 이마에 뽀뽀를 하고는 우주 끝까지 달려가버린 싸가지 없는 새끼…… “네가 내 여행이잖아. 잊지 마.” 날 사랑하지 않아서가 아니었던 거야. 다만 오로지 그 사랑만으로는 안 되는 일이었던 거지. 질량과 질감이 다른 다양한 관계들을 혼자 다 대신할 수는 없었어. 역부족도 그런 역부족이 없었던 거야. 멀리 떨어져 있어도, 심해를 헤매고 있어도 이어져 있는 보고 싶음이었다. 경민이 한아를 사랑하면, 그 별 전체가 한아를 사랑한다고 했다. 한아 역시 어째선지 우주를 건너오는 그 사랑을 느낄 수 있었다. 뭐라고 이름 붙이든 간에 한아는 망원경 앞의 저녁들이 좋았다. 가끔은 점점 좋아지는 게 경민인지, 그 저녁 시간들인지 헷갈리기도 했지만. “다른 어떤 뼈에도 붙어 있지 않은 갈비뼈가 있는 거 알고 있었어? 외로운 갈비뼈. 그런 곳을 짚어줘.” “놓아버리고, 놓쳐버린 걸 인정해. 하지만 정말 사랑했던 걸 알아?”“말하지 마. 괜히.” “아니, 해야겠어. 세상에…… 우주 끝까지 갔더니 네가 그걸 아는 게 나한테 가장 중요한 문제더라. 진부하게 말이지.” “너의 사랑할 수 있는 능력 한도 내에서 최선을 다해 사랑해준 거 알아. 고맙게 생각해.” 그러니까 결국 한아에겐 지금, 여기, 이 입술밖에 없었다. 멀리 날아온 입술. 한아를 중심으로 공전하는 입술. 떠났다가도 돌아오는 입술. 오로지 한 사람을 위해 조각된 입술. 그 감정적인 입술이 가짜라고 말할 수는 없었다. 흔하지 않지만 어떤 사랑은 항상성을 가지고, 요동치지 않고, 요철도 없이 랄랄라 하고 계속되기도 한다.'},
+  {title:'바깥은 여름', img:'book2_5.png', text:'자정 넘어 아내가 도배를 하자 했다. - 지금? - 응. 소파에서 주춤대다 "그래" 하고 일어섰다. 아내가 뭔가 먼저 하자는 건 오랜만의 일이었다. 아이들은 정말 크는 게 아까울 정도로 빨리 자랐다. 그리고 그런 걸 마주한 때라야 비로소 나는 계절이 하는 일과 시간이 맡은 몫을 알 수 있었다. 3월이 하는 일과 7월이 해낸 일을 알 수 있었다. 5월 또는 9월이라도 마찬가지였다. 아이들은 정말 크는 게 아까울 정도로 빨리 자랐다. 그리고 그런 걸 마주한 때라야 비로소 나는 계절이 하는 일과 시간이 맡은 몫을 알 수 있었다. 3월이 하는 일과 7월이 해낸 일을 알 수 있었다. 5월 또는 9월이라도 마찬가지였다. 이수는 자기 근황도 그런 식으로 돌았을지 모른다고 짐작했다. 걱정을 가장한 흥미의 형태로, 죄책감을 동반한 즐거움의 방식으로 화제에 올랐을 터였다. 누군가의 불륜, 누군가의 이혼, 누군가의 몰락을 얘기할 때 이수도 그런 식의 관심을 비친 적 있었다. 말을 안 해도 외롭고, 말을 하면 더 외로운 날들이 이어졌다. 그는 자기 삶의 대부분을 온통 말을 그리워하는 데 썼다. 그럴 땐 ‘과거’가 지나가고 사라지는 게 아니라 차오르고 새어나오는 거란 생각이 들었다. 살면서 나를 지나간 사람, 내가 경험한 시간, 감내한 감정 들이 지금 내 눈빛에 관여하고, 인상에 참여한다는 느낌을 받았다. 그것은 결코 사라지지 않고 표정의 양식으로, 분위기의 형태로 남아 내장 깊숙한 곳에서 공기처럼 배어 나왔다. 나는 늘 당신의 그런 영민함이랄까 재치에 반했지만 한편으론 당신이 무언가 가뿐하게 요약하고 판정할 때마다 묘한 반발심을 느꼈다. 어느 땐 그게 타인을 가장 쉬운 방식으로 이해하는, 한 개인의 역사와 무게, 맥락과 분투를 생략하는 너무 예쁜 합리성처럼 보여서. 위안이 된 건 아니었다. 이해받는 느낌이 들었다거나 감동한 것도 아니었다. 다만 시리로부터 당시 내 주위 인간들에게선 찾을 수 없던 한 가지 특별한 자질을 발견했는데, 그건 다름아닌 ‘예의’였다. _「어디로 가고 싶으신가요」'},
+  {title:'7년의 밤', img:'book2_6.png', text:'나는 내 아버지의 사형집행인이었다. 고양이는 천둥이 치기 전에 뇌에 자극을 느낀다고 한다. 인간의 뇌 변연계에도 비슷한 감관이 하나 있다. 재앙의 전조를 감지하면 작동되는 불안이라는 이름의 시계. 자리에 누운 후루도 나는 잠을 이루지 못했다. 째깍대는 초침소리를 들으며 기억 속으로 뒷걸음질 쳤다. 7년 전 그날, 아저씨와 경찰서에서 헤어진 후로. 갑옷을 입고 100미터 달리기를 하는 거나 같아요. 숨이 턱턱 막혔죠. 제 레인에서 벗어나고 싶었고요. 제대하고 어찌어찌 철도청에 입사했는데 2년도 못 채우고 도망쳐버렸어요. 출근하고, 퇴근하고, 월급 받고, 승진에 매달리고, 한 집안의 가장 노릇하는 미래가 제 앞에 있었어요. 그것이 삶이긴 하겠지만 과연 나 자신일까, 싶었던 거죠. 나와 내 인생은 일치해야 하는 거라고 믿었거든요. 아쉬움이 없었다면 거짓말일 것이다. 호의를 받을 마음이 없었을 뿐이다. 경험이 가르친바, 호의는 믿을 만한 게 아니었다. 유효기간은 베푸는 쪽이 그걸 거두기 전까지고, 하루짜리 호의도 부지기수였다. 고마워하며 사양하는 게 서로 낯이 서는 길이었다. ...자신의 개 같은 인생과 맞붙어 싸웠다는 삶의 증거물...그녀가 생각하기에, 스트레스는 겁쟁이의 변명이었다. 살아 있는 모든 것은 압박의 운명을 짊어진 존재였다. 생존을 위협하는 것은 피 터지게 싸워 거꾸러뜨려야 마땅했다. 하다못해 침이라도 뱉어줘야 했다. 그것이 그녀가 사는 법이었다. 현수는 자신의 손끝에서 깜빡거리는 담뱃불을 멍하니 바라보았다. 인생과 그 자신이 일치하는 자가 얼마나 될까. 삶 따로, 사람 따로, 운명 따로. 대부분은 그렇게 산다."이거 사실이 아니지요?"나는 아저씨의 눈이 어두워지는 것을 절망적인 심정으로 지켜봤다."그러니까 전부 다 사실은 아니지요?"한참 만에 대답을 들었다."사실이 전부는 아니야.""그러니까 사실이 거짓말일 수도 있다는 거지요?"침묵이 가장 정확한 답변을 할 때가 있다. 그때 우리 사이에 흐르던 침묵이 바로 그랬다. 나는 흉벽 안에서 울리는 진실의 목소리를 들었다. 아무것도 잘못되지 않았다. 모든 것이 사실이었다. 나는 눈자위가 축축하게 부풀어 오르는 걸 느꼈다. 아저씨의 눈자위가 붉어지는 걸 볼 수 있었다.'},
+  {title:'딸에 대하여', img:'book2_7.png', text:'종업원이 뜨거운 우동 두 그릇을 내온다. 수저통을 뒤져 숟가락과 젓가락을 꺼내는 딸애의 얼굴은 조금 지친 것 같기도, 마른 것 같기도, 늙어 버린 것 같기도 하다. “어쩌면 딸애는 공부를 지나치게 많이 했는지도 모른다. 배우고 배우다가 배울 필요가 없는 것, 배우지 말아야 할 것까지 배워 버린 거라고 나는 생각한다. 세계를 거부하는 법. 세계와 불화하는 법.” 무슨 말을 또 얼마나 해서 가슴에 대못을 치려는지 모르겠지만. 나한테도 권리가 있다. 힘들게 키운 자식이 평범하고 수수하게 사는 모습을 볼 권리가 있단 말이다.” “그리고 아프게 깨달았다. 이대로 딸애를 계속 당기기만 하면 결국 이 팽팽하고 위태로운 끈이 끊어지고 말겠구나. 이대로 딸을 잃고 말겠구나. 그러나 그게 이해를 뜻하는 건 아니다. 동의를 의미하는 것도 아니다. 나는 다만 내가 쥐고 있던 끈을 느슨하게 푼 것뿐이다. 딸애가 조금 더 멀리까지 움직일 수 있도록 양보한 것뿐이다. 기대를 버리고, 욕심을 버리고, 또 무언가를 버리고 계속 버리면서 물러선 것뿐이다. 그게 얼마나 어려운 일이었는지. 딸애는 정말 모르는 걸까. 모른 척하는 걸까. 모르고 싶은 걸까.” 기댈 데도 의지할 데도 없는 게 저 여자의 탓일까. 이런 생각을 하게 된 나는 이제 딸애에게 아무것도 기대할 수 없다고 단념해 버린 걸까. 어쩌면 나도, 딸애도 저 여자처럼 길고 긴 삶의 끝에 처박히다시피 하며 죽음을 기다리는 벌을 받게 될까.” 그게 뭐든 언제나 받는 사람은 모르는 법이다. 그건 다만 짐작이나 상상만으로는 알 수가 없는 거니까 자신이 받는 게 무엇인지, 그걸 얻기 위해 누군가가 맞바꾼 것이 무엇인지, 그래서 그 돈이 어떤 빛깔을 띠고 무슨 냄새를 풍기며 얼마나 무거워지는지 결코 알 수 없다. 그런 걸 누군가에게 줘야 한다면, 줄 수 있다면, 가족이 유일하다. 숨과 체온, 피와 살을 나눠 준 내 자식 하나뿐이다.그 애를 낳았을 때 얼마나 기뻤는지 몰라요. 보고 있으면 놀랍고 신기하고 잠든 그 애를 내려다보고 있으면 사랑이라는 말로밖에는 설명할 수 없는 감정이 차올랐어요. 나는 잠시 말을 그치고, 하고 싶은 말을 자르듯 어금니를 부딪으며 딱딱 소리를 내 본다. 어떤 말들은 도저히 소리가 되어 나오지 않는다. 쇠못처럼 단단히 박혀서 결코 뽑아낼 수 없을 것 같다.'},
+  {title:'광장', img:'book2_8.png', text:'"동무, 앉으시오. "명준은 움직이지 않았다."동무는 어느 쪽으로 가겠소?" "중립국."그들은 서로 쳐다본다. 앉으라고 하던 장교가, 윗몸을 테이블 위로 바싹 내밀면서, 말한다. "동무, 중립국도, 마찬가지 자본주의 나라요. 굶주림과 범죄가 우글대는 낯선 곳에 가서 어쩌자는 거요?" "중립국." "다시 한 번 생각하시오. 돌이킬 수 없는 중대한 결정이란 말요. 자랑스러운 권리를 왜 포기하는 거요?" "중립국." 이번에는, 그 옆에 앉은 장교가 나앉는다. "동무, 지금 인민공화국에서는, 참전 용사들을 위한 연금 법령을 냈소. 동무는 누구보다도 먼저 일터를 가지게 될 것이며, 인민의 영웅으로 존경받을 것이오. 전체 인민은 동무가 돌아오기를 기다리고 있소. 고향의 초목도 동무의 개선을 반길 거요." 이 추운 겨울날 지난날 그런 눈부신 때를 가졌다는 달콤한 추억이 없다면 그는 진작 얼어 죽었을 것이다. 어느 시인이 말하기를 얼어 죽는 사람은 추억이 없었던 사람이라고 했다지만 그것은 바로 독고민을 두고 한 말일시 분명하다. 마음이 추우면 죽는다. 무언가를 잊어버리고 있다가, 문득 무언가를 잊었다는 것을 깨달은 느낌이 든다. 무엇인가는 언제나처럼 생각나지 않는다. 실은아무것도 잊은 것은 없다. 그런 줄을 알면서도 이 느낌은 틀림없이 일어난다. 아주 언짢다. 느닷없고 짤막하면서, 풀이되지 않은 것이 풀이된 것 같아 뵈는, 그 짤막한 글월들의 힘과 그 뜨거운 여름 햇볕 아래서 겪은 어질머리 사이에는 닮은 데가 있다.깜빡할 사이에 오는 그런 복 받은 짬은 하기는 어떤 마이너스의 마당자리에서 일어나는 꿈일 것이리라. 비록 플러스의 자리래도 좋았다. 쉴새 없이 움직이고, 쫓아가고 하더라도, 그와 같은 비치는 단단함 속에 젖어가면서 살 수 있는 삶. 명준이 찾는 삶이다.아무 일에도 흥이 안 난다. 마음을 쏟을 만한 일을 찾아낼 수가 없다. 가슴이 뿌듯하면서 머릿속이 환해질, 그런 일이 없을까? 도낏자루 안 썩는 신선놀음 같은. 사람이 사람을 안다고 말할 때, 그건얼마나 큰 잘못인가. 사람이 알 수 있는 건 자기뿐. 속았다 하고 때었다 할 때, 꾸어주지도 않은 돈을 갚으라고 조르는 억지가 아닐까. ‘사랑‘이란 말 속에, 사람은 그랬으면 하는 바람의 모든 걸 집어넣는다. 그런 잘못과 헛된 바람과 헛믿음으로 가득 찬 말이 바로 사랑이다. 어마어마한 그물을 읽어낸 철학자가 늘그막에 가서 속을 털어놓는 책을 쓰는데, 그 맺음말에서 ‘사랑‘을 가져온다.말의 둔갑으로 재주놀이하는, 끝없는 오뚝이 놀음, 철학이란 그렇게 가난한 옷이었다.'},
+  {title:'난장이가 쏘아올린 작은 공', img:'book2_9.png', text:'사람들은 아버지를 난장이라고 불렀다. 사람들은 옳게 보았다. 아버지는 난장이였다. 불행하게도 사람들은 아버지를 보는 것 하나만 옳았다. 그 밖의 것들은 하나도 옳지 않았다. 나는 아버지, 어머니, 영호, 영희 그리고 나를 포함한 다섯 식구의 모든 것을 걸고 그들이 옳지 않다는 것을 언제나 말할 수 있다. 나의 ‘모든 것’이라는 표현에는 ‘다섯 식구의 목숨’이 포함되어 있다. 천국에 사는 사람들은 지옥을 생각할 필요가 없다. 그러나 우리 다섯 식구는 지옥에 살면서 천국을 생각했다. 단 하루도 천국을 생각해 보지 않은 날이 없다. 하루하루의 생활이 지겨웠기 때문이다. 우리의 생활은 전쟁과 같았다. 우리는 그 전쟁에서 날마다 지기만 했다. 사장은 종종 불황이라는 말을 사용했다. 그와 그의 참모들은 우리에게 쓰는 여러 형태의 억압을 감추기 위해 불황이라는 말을 이용하고는 했다. 그렇지 않을 때는 힘껏 일한 다음 노사가 공평히 나누어 갖게 될 부에 대해 이야기했다. 그러나 그가 말하는 희망은 우리에게 아무 의미를 주지 못했다. 우리는 그 희망 대신 간이 알맞은 무말랭이가 우리의 공장 식탁에 오르기를 더 원했다. 폭력이란 무엇인가? 총탄이나 경찰 곤봉이나 주먹만이 폭력이 아니다. 우리의 도시 한 귀퉁이에서 젖먹이 아이들이 굶주리는 것을 내버려 두는 것도 폭력이다. 지도자가 넉넉한 생활을 하게 되면 인간의 고통을 잊어버리게 된다. 따라서 그들의 희생이라는 말은 전혀 위선으로 변한다. 나는 과거의 착취와 야만이 오히려 정직하였다고 생각한다.아아아아아아아 하는 울음이 느리게 나의 목을 타고 올라왔다. “울지 마, 영희야.” 큰오빠가 말했었다. “제발 울지 마. 누가 듣겠어.” 나는 울음을 그칠 수 없었다.'},
+  {title:'당신들의 천국', img:'book2_10.png', text:'하지만 주정수 시대에도 명분이나 동기에 잘못이 있었던 것은 아니었다.......게다가 명분이라는 건 언제나 힘있는 자의 차지였다.주정수는 최고 최선의 명분을 그 혼자 독차지해버리고 있었다. 그 주정수 명분 앞에 다른 사람들은 아무도 자신을 주장할 자기의 명분을 따로 지닐 수 없었다. 소록도의 환자들에겐 낙원이 없었다.환자들에게 낙원이 없는 한 소록도엔 낙원이 없었다. 그들의 이기적인 소문 속에서만 소록도의 천국은 존재하고 있었다. 내일의 꿈을 오늘 미리 가불해주고,그 가상의 현실을 당징 오늘의 그것으로 착각하고 즐기게 하여 진짜 현실의 갈등을 잠재어버리는 말의 요술은 이 섬을 다스려온 사람들의 해묵은 수법이기능 하지만, 그러나 오늘의 삶이라는 것이 늘 힘겹고 짜증나는 사람들에게는 그야말로 지극히 손쉽고 효과적인 지배술의 하나였습니다. ˝당신은 앞으로 이 섬과 섬사람들을 위해 당신이 시작하고자 하는 일에 일신을 위해서는 물 한 모금 사사로이 취하지 않을 것임을 자비하신 주님과 여기 모인 증인들 앞에서 서약하시겠습니까?˝˝전 이렇게 알고 있습니다. 섬을 나가래도 나가지 못하는 사람들은 환자들입니다. 이자들은 병을 얻어 바깥세상으로부터 이 섬으로쫓겨 들어왔고, 섬으로 들어온 다음에도 그 바깥세상에 대한 원망과두려움을 끝없이 길러온 그런 환자들이란 말씀입니다. 하지만 모험을 겪으며 섬을 빠져나가려는 친구들은 이미 그런 환자는 아닙니다. 그들은 환자이기 이전에 인간인 거지요. 환자로서의 생존 양식과 일반의 그것을 구별짓기에 지쳐버린, 그래서 환자로서의 자신의 특수한 처지를 벗어버리고 보다 깊은 생존의 충동에 따라 인간으로서 섬을 나가고자 한 사람들이 이들이란 말입니다. 그런데 그 환자와 환자 아닌 사람들이 실상은 같은 사람들이 아니겠습니까. 말하자면 이섬에 삶을 의지하고 있는 사람들은 누구나 환자로서의 남다른 처지와 인간으로서의 보편적인 존재 조건들을 두 겹으로 동시에 살아나가고 있는 셈이지요. 우리로선 얼핏 이해하기 어려운 이 사람들의 행동의 모순은 바로 거기서부터 연유하고 있지 않나 생각됩니다.˝'},
+];
+
+const CATEGORY_MAP={
+  'kr_poetry': { prefix:'book3_', data:SET_KR_POETRY },
+  'kr_modern': { prefix:'book2_', data:SET_KR_MODERN },
+  'classics' : { prefix:'book1_', data:SET_CLASSICS },
+};
+
+/* 링 세팅 */
+function mountRings(cat){
+  ringWrap.innerHTML='';
+  const {prefix,data}=CATEGORY_MAP[cat];
+
+  data.forEach((bk,i)=>{
+    const box=document.createElement('div');
+    box.className='ring-box';
+    box.dataset.book=bk.title;
+    box.innerHTML=`
+      <img class="ring-img" src="${prefix}${i+1}.png" alt="${bk.title} 표지">
+      <span class="title">${bk.title}</span><span class="prog">—/—</span>
+    `;
+    box.style.left='50%'; box.style.top='50%'; box.style.transform='translate(-50%,-50%)';
+    ringWrap.appendChild(box);
+  });
+
+  data.forEach(bk=>{
+    const txt = bk.text && bk.text.trim() ? bk.text : placeholderText(bk.title);
+    ensureBook(bk.title, txt);
+  });
+
+  document.querySelectorAll('.ring-box').forEach((box)=>{
+    box.addEventListener('mouseenter', updateRingProgress);
+    box.addEventListener('click', ()=>{ saveIndex(); loadBook(box.dataset.book); });
+  });
+
+  if(!CATEGORY_STATE[currentCategory].allCleared){
+    if(data[0]) loadBook(data[0].title);
+    setActiveRing(data[0]?.title||'');
+  }
+
+  updateRingProgress();
+
+  if(CATEGORY_STATE[currentCategory].allCleared){
+    document.querySelectorAll('.ring-box').forEach(b=>b.classList.add('cleared'));
+    showAllClear();
+  }else{
+    hideAllClear();
+  }
+
+  pulseRings(520);
+  startOrbit();
+}
+
+/* 붙여넣기 자리 */
+function placeholderText(title){
+  return `《${title}》 미리보기(합법 범위) 텍스트를 붙여넣어 주세요.
+- 여기 커서를 두고 Ctrl/Cmd+V
+- 넣은 만큼만 페이지가 생성됩니다.
+
+여기에 붙여넣기 시작…`;
+}
+
+/* 붙여넣기 주입 */
+document.addEventListener('paste',(ev)=>{
+  const st=BOOK_STATE[currentBook]; if(!st) return;
+  const isPH = st.text.startsWith('《') && st.text.includes('붙여넣어');
+  if(!isPH) return;
+  const text=(ev.clipboardData||window.clipboardData).getData('text');
+  if(!text || text.length<20) return;
+  st.text = text.replace(/\r\n/g,'\n').replace(/\n{3,}/g,'\n\n');
+  st.spreads = paginateByMeasure(st.text);
+  st.index=0;
+  spreads=st.spreads; spreadIndex=0;
+  render(); updateRingProgress();
+});
+
+/* 진행/클리어 */
+function updateRingProgress(){
+  document.querySelectorAll('.ring-box').forEach((box)=>{
+    const title=box.dataset.book;
+    const st=BOOK_STATE[title]; if(!st) return;
+    const total=st.spreads.length*2 || 1;
+    const read =(st.index*2+2);
+    const shown=Math.min(read,total);
+    const progEl=box.querySelector('.prog');
+    if(progEl) progEl.textContent=`${st.cleared? total: shown}/${total}`;
+    if(st.cleared) box.classList.add('cleared');
+  });
+}
+function setActiveRing(title){
+  document.querySelectorAll('.ring-box').forEach(b=>{
+    if(b.dataset.book===title) b.classList.add('active'); else b.classList.remove('active');
+  });
+}
+function clearCurrentBook(){
+  const title=currentBook;
+  const box=[...document.querySelectorAll('.ring-box')].find(b=>b.dataset.book===title);
+  const st=BOOK_STATE[title]; if(!box||!st||st.cleared) return;
+  st.cleared=true; box.classList.add('cleared'); box.classList.remove('active');
+  updateRingProgress(); burstParticles(box); checkAllCleared();
+}
+function checkAllCleared(){
+  const boxes=[...document.querySelectorAll('.ring-box')];
+  if(!boxes.length) return;
+  const allCleared=boxes.every(b=>b.classList.contains('cleared'));
+  if(allCleared){
+    CATEGORY_STATE[currentCategory].allCleared = true;
+    showAllClear();
+  }
+}
+function burstParticles(box){
+  const rect=box.getBoundingClientRect();
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  const colors=['#0088FF','#F27AB4','#59B4FF','#00FFD4','#FB55BE','#FFFAB8','#9DFF64','#FFC9AD','#A05EF6','#F72585'];
+  const N=32, Rmin=40, Rmax=140;
+  for(let i=0;i<N;i++){
+    const p=document.createElement('div'); p.className='fx-p';
+    const ang=(i/N)*Math.PI*2 + (Math.random()*0.6 - 0.3);
+    const r=Rmin+Math.random()*(Rmax-Rmin);
+    const dx=Math.cos(ang)*r, dy=Math.sin(ang)*r;
+    const dur=650+Math.random()*350;
+    const sz=4+Math.random()*5;
+    const col=colors[i%colors.length];
+    p.style.left=cx+'px'; p.style.top=cy+'px';
+    p.style.width=sz+'px'; p.style.height=sz+'px';
+    p.style.background=col;
+    p.style.setProperty('--dx', dx+'px'); p.style.setProperty('--dy', dy+'px');
+    p.style.animationDuration=`${dur}ms, ${dur}ms`;
+    document.getElementById('fxLayer').appendChild(p);
+    p.addEventListener('animationend', ()=>p.remove());
+  }
+}
+
+/* Start */
+const controls=document.getElementById('controls');
+const startBtn=document.getElementById('startBtn');
+startBtn.addEventListener('click', ()=>{
+  document.getElementById('intro').style.display='none';
+  controls.classList.add('started'); document.getElementById('bookCenter').classList.add('started');
+  started=true; startHeaderTimer();
+
+  ensureBook('기본', FULL_TEXT);
+  const activeBtn = document.querySelector('.right-btn.active');
+  const cat = activeBtn ? activeBtn.dataset.cat : 'kr_poetry';
+  activateCategory(cat);
+});
+
+/* 버튼 */
+nextBtn.onclick=()=>{
+  const st=BOOK_STATE[currentBook]; if(!st) return;
+  if(spreadIndex<spreads.length-1){
+    spreadIndex++; saveIndex(); render();
+    const prevInt=intelligence;
+    intelligence=clamp(intelligence+10,0,100); updateMask();
+    const icon1=document.querySelector('.icon1');
+    if(intelligence>prevInt && icon1){ icon1.classList.remove('glow'); void icon1.offsetWidth; icon1.classList.add('glow'); }
+    pulseBook(); playPageSound(); incrementPagesRead(1);
+  }else{
+    const last=spreads[spreadIndex];
+    const rightEmpty = !(last.right && last.right.trim());
+    if(!rightEmpty){ clearCurrentBook(); pulseBook(); playPageSound(); incrementPagesRead(1); }
+  }
+};
+prevBtn.onclick=()=>{ if(spreadIndex>0){ spreadIndex--; saveIndex(); render(); pulseBook(); playPageSound(); } };
+
+/* 리사이즈 */
+window.addEventListener('resize', ()=>{
+  if(!BOOK_STATE[currentBook]) return;
+  const st=BOOK_STATE[currentBook];
+  st.spreads=paginateByMeasure(st.text);
+  spreads=st.spreads;
+  spreadIndex=Math.min(st.index, spreads.length-1);
+  render();
+});
+
+/* 카테고리 버튼 */
+const shelf=document.getElementById('shelf');
+shelf.addEventListener('click',(e)=>{
+  const btn=e.target.closest('.right-btn'); if(!btn) return;
+  activateCategory(btn.dataset.cat);
+});
+function activateCategory(cat){
+  currentCategory = cat;
+  document.querySelectorAll('.right-btn').forEach(b=>{
+    if(b.dataset.cat===cat) b.classList.add('active'); else b.classList.remove('active');
+  });
+  mountRings(cat);
+}
+
+/* 🎨 컬러 선택 로직 + 아이콘 hue-rotate 계산 */
+const colorPanel = document.getElementById('colorPanel');
+const colorPicker = document.getElementById('colorPicker');
+
+colorPanel.addEventListener('click',(e)=>{
+  const sw = e.target.closest('.swatch');
+  if(!sw) return;
+  const c = sw.dataset.color;
+  setAccent(c);
+  if(colorPicker) colorPicker.value = c;
+});
+if(colorPicker){
+  colorPicker.addEventListener('input', (e)=> setAccent(e.target.value));
+}
+
+/* HEX → HSL */
+function hexToHsl(hex){
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if(!m) return {h:240,s:1,l:0.5};
+  let r=parseInt(m[1],16)/255, g=parseInt(m[2],16)/255, b=parseInt(m[3],16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h, s, l=(max+min)/2;
+  if(max===min){ h=0; s=0; }
+  else{
+    const d=max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d + (g<b?6:0); break;
+      case g: h=(b-r)/d + 2; break;
+      case b: h=(r-g)/d + 4; break;
+    }
+    h*=60;
+  }
+  return {h,s,l};
+}
+
+function setAccent(hex){
+  /* 1) UI 메인 컬러 적용 */
+  document.documentElement.style.setProperty('--accent', hex);
+
+  /* 2) 아이콘 hue-rotate 각도 계산(원본 파랑≈240° → 목표 색상) */
+  const baseBlueHue = 240;
+  const {h} = hexToHsl(hex);
+  let delta = h - baseBlueHue;
+  if(delta < -180) delta += 360;
+  if(delta >  180) delta -= 360;
+  document.documentElement.style.setProperty('--icon-hue', `${delta}deg`);
+  document.documentElement.style.setProperty('--icon-sat', '1');     // 필요 시 조정
+  document.documentElement.style.setProperty('--icon-bright','1');   // 필요 시 조정
+}
+
+/* 초기 세팅 */
+ensureBook('기본', FULL_TEXT);
+setAccent('#0000FF');   // 시작 테마
+</script>
+</body>
+</html>
